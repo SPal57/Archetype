@@ -101,18 +101,31 @@ body {
 }
 
 .sidebar-brand h2 {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--text-main);
-  letter-spacing: 0.2px;
+  font-size: 18px;
+  line-height: 1.2;
+  color: var(--primary-jnj, #D51900);
   white-space: nowrap;
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.sidebar-brand .brand-bold {
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.sidebar-brand .brand-light {
+  font-weight: 400;
+  letter-spacing: -0.1px;
 }
 
 .sidebar-brand p {
   font-size: 11px;
   color: var(--text-muted);
   font-weight: 500;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .sidebar-section-title {
