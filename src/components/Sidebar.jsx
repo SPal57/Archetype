@@ -3,14 +3,6 @@ import React from 'react';
 export default function Sidebar({ activeTab, setActiveTab }) {
   return (
     <aside className="sidebar">
-      <div className="sidebar-brand">
-        <h2>
-          <span className="brand-bold">J&J</span>{' '}
-          <span className="brand-light">MedTech</span>
-        </h2>
-        <p>Archetype Provisioning Hub</p>
-      </div>
-
       <div>
         <div className="sidebar-section-title">WORKSPACE</div>
         <ul className="nav-list">

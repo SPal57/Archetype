@@ -4,6 +4,8 @@ import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
 import ArchetypeTable from './components/ArchetypeTable';
 import ActionModal from './components/ActionModal';
+import SearchCard from './components/SearchCard';
+import AdvancedSearchModal from './components/AdvancedSearchModal';
 import { Search, Download } from 'lucide-react';
 
 export default function App() {
@@ -11,6 +13,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('All Statuses');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   
   // Modal State
   const [modalState, setModalState] = useState({
@@ -27,6 +30,30 @@ export default function App() {
         itemCode ? ` for Archetype code ${itemCode}` : ''
       }. Ready for backend API integration.`
     });
+  };
+
+  const handleBasicSearch = (searchData) => {
+    const activeFilters = Object.entries(searchData)
+      .filter(([_, val]) => val && val !== 'All Statuses')
+      .map(([k, v]) => `${k}="${v}"`)
+      .join(', ');
+
+    handleActionClick(
+      'MSCL Archetype Search',
+      activeFilters ? `with criteria: ${activeFilters}` : 'for all archetypes'
+    );
+  };
+
+  const handleApplyAdvancedFilters = (filters) => {
+    const activeFilters = Object.entries(filters)
+      .filter(([_, val]) => val && val !== 'Any')
+      .map(([k, v]) => `${k}="${v}"`)
+      .join(', ');
+
+    handleActionClick(
+      'Advanced Filters Applied',
+      activeFilters ? `Filters: ${activeFilters}` : 'all criteria reset'
+    );
   };
 
   const closeModal = () => {
@@ -112,6 +139,13 @@ export default function App() {
             </button>
           </div>
 
+          {/* MSCL Archetype Search Card */}
+          <SearchCard
+            onOpenAdvancedSearch={() => setIsAdvancedSearchOpen(true)}
+            onSearch={handleBasicSearch}
+            onReset={() => handleActionClick('Search Filters Reset')}
+          />
+
           {/* Table Component */}
           <ArchetypeTable onActionClick={handleActionClick} />
         </main>
@@ -123,6 +157,13 @@ export default function App() {
         onClose={closeModal}
         title={modalState.title}
         message={modalState.message}
+      />
+
+      {/* Advanced Search Modal */}
+      <AdvancedSearchModal
+        isOpen={isAdvancedSearchOpen}
+        onClose={() => setIsAdvancedSearchOpen(false)}
+        onApplyFilters={handleApplyAdvancedFilters}
       />
     </div>
   );

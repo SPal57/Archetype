@@ -13,7 +13,7 @@ export default function ArchetypeTable({ onActionClick }) {
       visioStatus: 'Approval In Progress',
       visioClass: 'in-progress',
       approvals: { approved: 2, total: 3 },
-      lastUpdate: '10/Feb/2026',
+      lastUpdate: '2026/02/10',
       updatedBy: 'Bruno Oliveira',
       actionType: 'view'
     },
@@ -26,7 +26,7 @@ export default function ArchetypeTable({ onActionClick }) {
       visioStatus: 'Approved',
       visioClass: 'approved',
       approvals: { approved: 3, total: 3 },
-      lastUpdate: '15/Jan/2026',
+      lastUpdate: '2026/01/15',
       updatedBy: 'Maria Santos',
       actionType: 'view'
     },
@@ -39,7 +39,7 @@ export default function ArchetypeTable({ onActionClick }) {
       visioStatus: 'New',
       visioClass: 'new',
       approvals: { approved: 0, total: 3 },
-      lastUpdate: '02/Mar/2026',
+      lastUpdate: '2026/03/02',
       updatedBy: '',
       actionType: 'generate'
     },
@@ -52,7 +52,7 @@ export default function ArchetypeTable({ onActionClick }) {
       visioStatus: 'Approval In Progress',
       visioClass: 'in-progress',
       approvals: { approved: 1, total: 3 },
-      lastUpdate: '20/Feb/2026',
+      lastUpdate: '2026/02/20',
       updatedBy: 'Tom Bradley',
       actionType: 'view'
     },
@@ -65,7 +65,7 @@ export default function ArchetypeTable({ onActionClick }) {
       visioStatus: 'Draft',
       visioClass: 'draft',
       approvals: { approved: 0, total: 3 },
-      lastUpdate: '28/Mar/2026',
+      lastUpdate: '2026/03/28',
       updatedBy: '',
       actionType: 'view'
     },
@@ -78,7 +78,7 @@ export default function ArchetypeTable({ onActionClick }) {
       visioStatus: 'Ready for Approval',
       visioClass: 'ready',
       approvals: { approved: 0, total: 3 },
-      lastUpdate: '05/Apr/2026',
+      lastUpdate: '2026/04/05',
       updatedBy: 'Priya Nair',
       actionType: 'view'
     },
@@ -91,7 +91,7 @@ export default function ArchetypeTable({ onActionClick }) {
       visioStatus: 'Reopened',
       visioClass: 'reopened',
       approvals: { approved: 0, total: 3 },
-      lastUpdate: '10/Sep/2026',
+      lastUpdate: '2026/09/10',
       updatedBy: 'Anna Mueller',
       actionType: 'view'
     },
@@ -104,7 +104,7 @@ export default function ArchetypeTable({ onActionClick }) {
       visioStatus: 'Approved',
       visioClass: 'approved',
       approvals: { approved: 3, total: 3 },
-      lastUpdate: '12/Jun/2026',
+      lastUpdate: '2026/06/12',
       updatedBy: 'Wei Liang',
       actionType: 'view'
     }
@@ -132,15 +132,15 @@ export default function ArchetypeTable({ onActionClick }) {
         <table className="archetype-table">
           <thead>
             <tr>
-              <th>CODE</th>
-              <th>LANE ID</th>
-              <th>TITLE</th>
-              <th>LEGAL ENTITIES</th>
-              <th>PFC STATUS</th>
-              <th>L3 VISIO STATUS</th>
-              <th>APPROVALS</th>
-              <th>LAST UPDATE</th>
-              <th>ACTIONS</th>
+              <th>Code</th>
+              <th>Lane ID</th>
+              <th>Title</th>
+              <th>Legal Entities</th>
+              <th>PFC Status</th>
+              <th>L3 Visio Status</th>
+              <th>Approvals</th>
+              <th>Last Update</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
