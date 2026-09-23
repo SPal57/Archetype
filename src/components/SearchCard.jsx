@@ -3,12 +3,12 @@ import { Search, Filter } from 'lucide-react';
 
 export default function SearchCard({ onOpenAdvancedSearch, onSearch, onReset }) {
   const [formData, setFormData] = useState({
-    msclPatternId: '',
+    patternId: 'All Patterns',
+    status: 'All Statuses',
     laneId: '',
     archetypeId: '',
     description: '',
-    owner: '',
-    status: 'All Statuses'
+    owner: ''
   });
 
   const handleChange = (e) => {
@@ -18,12 +18,12 @@ export default function SearchCard({ onOpenAdvancedSearch, onSearch, onReset }) 
 
   const handleReset = () => {
     setFormData({
-      msclPatternId: '',
+      patternId: 'All Patterns',
+      status: 'All Statuses',
       laneId: '',
       archetypeId: '',
       description: '',
-      owner: '',
-      status: 'All Statuses'
+      owner: ''
     });
     if (onReset) onReset();
   };
@@ -44,7 +44,7 @@ export default function SearchCard({ onOpenAdvancedSearch, onSearch, onReset }) 
         <div className="search-card-top">
           <div className="search-card-title">
             <Search size={16} className="search-title-icon" />
-            <span>Search MSCL Archetypes</span>
+            <span>Search Archetypes</span>
           </div>
 
           <button
@@ -59,61 +59,23 @@ export default function SearchCard({ onOpenAdvancedSearch, onSearch, onReset }) 
 
         <form onSubmit={handleSearch}>
           <div className="search-fields-grid">
+            {/* 1. Pattern ID Dropdown */}
             <div className="form-group">
-              <label htmlFor="msclPatternId">MSCL Pattern ID</label>
-              <input
-                type="text"
-                id="msclPatternId"
-                name="msclPatternId"
-                value={formData.msclPatternId}
+              <label htmlFor="patternId">Pattern ID</label>
+              <select
+                id="patternId"
+                name="patternId"
+                value={formData.patternId}
                 onChange={handleChange}
-              />
+              >
+                <option value="All Patterns">All Patterns</option>
+                <option value="P-P">P-P</option>
+                <option value="P-V-P">P-V-P</option>
+                <option value="P-FP">P-FP</option>
+              </select>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="laneId">Lane ID</label>
-              <input
-                type="text"
-                id="laneId"
-                name="laneId"
-                value={formData.laneId}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="archetypeId">Archetype ID</label>
-              <input
-                type="text"
-                id="archetypeId"
-                name="archetypeId"
-                value={formData.archetypeId}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="description">Description</label>
-              <input
-                type="text"
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="owner">Owner</label>
-              <input
-                type="text"
-                id="owner"
-                name="owner"
-                value={formData.owner}
-                onChange={handleChange}
-              />
-            </div>
-
+            {/* 2. Status Dropdown (in 2nd position) */}
             <div className="form-group">
               <label htmlFor="status">Status</label>
               <select
@@ -130,6 +92,67 @@ export default function SearchCard({ onOpenAdvancedSearch, onSearch, onReset }) 
                 <option value="Draft">Draft</option>
                 <option value="Reopened">Reopened</option>
               </select>
+            </div>
+
+            {/* 3. Lane ID */}
+            <div className="form-group">
+              <label htmlFor="laneId">Lane ID</label>
+              <div className="input-with-icon">
+                <input
+                  type="text"
+                  id="laneId"
+                  name="laneId"
+                  placeholder="Lane ID"
+                  value={formData.laneId}
+                  onChange={handleChange}
+                />
+                <Search size={14} className="inner-search-icon" />
+              </div>
+            </div>
+
+            {/* 4. Archetype ID */}
+            <div className="form-group">
+              <label htmlFor="archetypeId">Archetype ID</label>
+              <div className="input-with-icon">
+                <input
+                  type="text"
+                  id="archetypeId"
+                  name="archetypeId"
+                  placeholder="Archetype ID"
+                  value={formData.archetypeId}
+                  onChange={handleChange}
+                />
+                <Search size={14} className="inner-search-icon" />
+              </div>
+            </div>
+
+            {/* 5. Description */}
+            <div className="form-group">
+              <label htmlFor="description">Description</label>
+              <input
+                type="text"
+                id="description"
+                name="description"
+                placeholder="Keyword search"
+                value={formData.description}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* 6. Owner */}
+            <div className="form-group">
+              <label htmlFor="owner">Owner</label>
+              <div className="input-with-icon">
+                <input
+                  type="text"
+                  id="owner"
+                  name="owner"
+                  placeholder="Owner"
+                  value={formData.owner}
+                  onChange={handleChange}
+                />
+                <Search size={14} className="inner-search-icon" />
+              </div>
             </div>
           </div>
 

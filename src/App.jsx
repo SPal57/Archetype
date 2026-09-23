@@ -34,12 +34,12 @@ export default function App() {
 
   const handleBasicSearch = (searchData) => {
     const activeFilters = Object.entries(searchData)
-      .filter(([_, val]) => val && val !== 'All Statuses')
+      .filter(([_, val]) => val && val !== 'All Statuses' && val !== 'All Patterns')
       .map(([k, v]) => `${k}="${v}"`)
       .join(', ');
 
     handleActionClick(
-      'MSCL Archetype Search',
+      'Search Archetypes',
       activeFilters ? `with criteria: ${activeFilters}` : 'for all archetypes'
     );
   };
