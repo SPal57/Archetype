@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import TopBanner from './components/TopBanner';
 import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
@@ -6,16 +6,21 @@ import ArchetypeTable from './components/ArchetypeTable';
 import ActionModal from './components/ActionModal';
 import SearchCard from './components/SearchCard';
 import AdvancedSearchModal from './components/AdvancedSearchModal';
-import { Search, Download } from 'lucide-react';
+import CreateArchetype from './components/CreateArchetype';
+import ArchetypeDetail from './components/ArchetypeDetail';
+import { initialArchetypesData } from './data/archetypesData';
+import { Download } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState('Andres Simar');
   const [activeTab, setActiveTab] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('All Statuses');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [currentView, setCurrentView] = useState('list'); // 'list' | 'create' | 'detail'
+  const [selectedArchetype, setSelectedArchetype] = useState(null);
+  const [allArchetypes, setAllArchetypes] = useState(initialArchetypesData);
+  const [activeSearchCriteria, setActiveSearchCriteria] = useState(null);
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   
-  // Modal State
+  // Modal State for notifications/actions
   const [modalState, setModalState] = useState({
     isOpen: false,
     title: '',
@@ -27,38 +32,150 @@ export default function App() {
       isOpen: true,
       title: `${actionName} Action`,
       message: `Action "${actionName}" clicked${
-        itemCode ? ` for Archetype code ${itemCode}` : ''
+        itemCode ? ` for Archetype ${itemCode}` : ''
       }. Ready for backend API integration.`
     });
   };
 
-  const handleBasicSearch = (searchData) => {
-    const activeFilters = Object.entries(searchData)
-      .filter(([_, val]) => val && val !== 'All Statuses' && val !== 'All Patterns')
-      .map(([k, v]) => `${k}="${v}"`)
-      .join(', ');
+  // Filter archetypes based on search card criteria
+  const filteredArchetypes = useMemo(() => {
+    if (!activeSearchCriteria) return allArchetypes;
 
-    handleActionClick(
-      'Search Archetypes',
-      activeFilters ? `with criteria: ${activeFilters}` : 'for all archetypes'
-    );
+    return allArchetypes.filter((item) => {
+      // Pattern ID
+      if (
+        activeSearchCriteria.patternId &&
+        activeSearchCriteria.patternId !== 'All Patterns' &&
+        item.patternId !== activeSearchCriteria.patternId
+      ) {
+        return false;
+      }
+
+      // Status (matching either visioStatus or pfcStatus)
+      if (
+        activeSearchCriteria.status &&
+        activeSearchCriteria.status !== 'All Statuses'
+      ) {
+        const queryStatus = activeSearchCriteria.status.toLowerCase();
+        const visioMatch = item.visioStatus?.toLowerCase().includes(queryStatus);
+        const pfcMatch = item.pfcStatus?.toLowerCase().includes(queryStatus);
+        if (!visioMatch && !pfcMatch) return false;
+      }
+
+      // Lane ID
+      if (activeSearchCriteria.laneId) {
+        const queryLane = activeSearchCriteria.laneId.trim().toLowerCase();
+        if (!item.laneId?.toLowerCase().includes(queryLane)) {
+          return false;
+        }
+      }
+
+      // Archetype ID / Code
+      if (activeSearchCriteria.archetypeId) {
+        const queryCode = activeSearchCriteria.archetypeId.trim().toLowerCase();
+        const codeMatch = item.code?.toLowerCase().includes(queryCode);
+        const codeLinesMatch = item.codeLines?.some((part) =>
+          part.toLowerCase().includes(queryCode)
+        );
+        if (!codeMatch && !codeLinesMatch) return false;
+      }
+
+      // Description / Title
+      if (activeSearchCriteria.description) {
+        const queryDesc = activeSearchCriteria.description.trim().toLowerCase();
+        const descMatch = item.description?.toLowerCase().includes(queryDesc);
+        const titleMatch = item.title?.toLowerCase().includes(queryDesc);
+        if (!descMatch && !titleMatch) return false;
+      }
+
+      // Owner
+      if (activeSearchCriteria.owner) {
+        const queryOwner = activeSearchCriteria.owner.trim().toLowerCase();
+        const ownerMatch = item.owner?.toLowerCase().includes(queryOwner);
+        const updatedByMatch = item.updatedBy?.toLowerCase().includes(queryOwner);
+        if (!ownerMatch && !updatedByMatch) return false;
+      }
+
+      return true;
+    });
+  }, [allArchetypes, activeSearchCriteria]);
+
+  // Handle Basic Search Submission
+  const handleBasicSearch = (searchData) => {
+    setActiveSearchCriteria(searchData);
   };
 
-  const handleApplyAdvancedFilters = (filters) => {
-    const activeFilters = Object.entries(filters)
-      .filter(([_, val]) => val && val !== 'Any')
-      .map(([k, v]) => `${k}="${v}"`)
-      .join(', ');
+  // Handle Reset Filters
+  const handleResetSearch = () => {
+    setActiveSearchCriteria(null);
+  };
 
-    handleActionClick(
-      'Advanced Filters Applied',
-      activeFilters ? `Filters: ${activeFilters}` : 'all criteria reset'
-    );
+  // Handle Advanced Search Filters
+  const handleApplyAdvancedFilters = (filters) => {
+    setActiveSearchCriteria((prev) => ({
+      ...(prev || {}),
+      ...filters
+    }));
+  };
+
+  // Handle Code click on row (specifically redirects to detail for row 1)
+  const handleCodeClick = (row) => {
+    setSelectedArchetype(row);
+    setCurrentView('detail');
+  };
+
+  // Handle + Create button click
+  const handleCreateClick = () => {
+    setCurrentView('create');
+  };
+
+  // Handle Save from Create Archetype form
+  const handleSaveArchetype = (newRecord) => {
+    const formattedRecord = {
+      id: String(Date.now()),
+      codeLines: [
+        newRecord.archetypeId || 'L3NEW',
+        newRecord.csclLaneId || 'CSCL',
+        'GL'
+      ],
+      code: newRecord.archetypeId || `L3-${newRecord.csclLaneId}`,
+      laneId: newRecord.csclLaneId || '0000099999',
+      title: newRecord.shortDescription || 'New Archetype Definition',
+      legalEntities: 'Johnson & Johnson Global Supply Chain',
+      pfcStatus: newRecord.status || 'Draft',
+      pfcStatusClass: 'status-dot-new',
+      visioStatus: newRecord.status === 'Approved' ? 'Approved' : 'Draft',
+      visioClass: newRecord.status === 'Approved' ? 'approved' : 'draft',
+      approvals: { approved: 0, total: 3, steps: ['pending', 'pending', 'pending'] },
+      lastUpdate: new Date().toISOString().slice(0, 10).replace(/-/g, '/'),
+      updatedBy: newRecord.owner || currentUser,
+      patternId: 'P-P',
+      owner: newRecord.owner,
+      description: newRecord.shortDescription
+    };
+
+    setAllArchetypes((prev) => [formattedRecord, ...prev]);
+    setCurrentView('list');
+    setModalState({
+      isOpen: true,
+      title: 'Archetype Created Successfully',
+      message: `Lane "${newRecord.csclLaneId}" has been saved and added to the archetype repository.`
+    });
   };
 
   const closeModal = () => {
     setModalState({ isOpen: false, title: '', message: '' });
   };
+
+  // Calculate dynamic metrics
+  const totalCount = filteredArchetypes.length;
+  const newCount = filteredArchetypes.filter((a) => a.pfcStatus === 'New' || a.visioStatus === 'New').length;
+  const inReviewCount = filteredArchetypes.filter(
+    (a) => a.pfcStatus === 'In Review' || a.visioStatus === 'Approval In Progress'
+  ).length;
+  const approvedCount = filteredArchetypes.filter(
+    (a) => a.pfcStatus === 'Approved' || a.visioStatus === 'Approved'
+  ).length;
 
   return (
     <div className="app-container">
@@ -73,81 +190,78 @@ export default function App() {
 
       <div className="main-layout">
         {/* Left Sidebar Navigation */}
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={(tab) => {
+            setActiveTab(tab);
+            setCurrentView('list');
+          }}
+        />
 
         {/* Main Content Workspace */}
         <main className="content-area">
-          {/* Page Title & Top Header Controls */}
-          <div className="page-header">
-            <div className="page-title-box">
-              <h1>
-                {activeTab === 'all'
-                  ? 'Archetype List'
-                  : 'My Approval Actions'}
-              </h1>
-              <p>
-                {activeTab === 'all'
-                  ? 'Select an archetype to view its L3 Visio diagram'
-                  : 'Archetypes requiring your approval or action'}
-              </p>
-            </div>
-
-            <div className="header-controls">
-              <select
-                className="status-select"
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-              >
-                <option value="All Statuses">All Statuses</option>
-                <option value="New">New</option>
-                <option value="Draft">Draft</option>
-                <option value="Approval In Progress">Approval In Progress</option>
-                <option value="Ready for Approval">Ready for Approval</option>
-                <option value="Approved">Approved</option>
-                <option value="Reopened">Reopened</option>
-              </select>
-
-              <div className="search-input-wrapper">
-                <Search className="search-icon" />
-                <input
-                  type="text"
-                  className="search-input"
-                  placeholder="Search code, title, lane ID..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+          {currentView === 'create' ? (
+            <CreateArchetype
+              onBack={() => setCurrentView('list')}
+              onSave={handleSaveArchetype}
+            />
+          ) : currentView === 'detail' ? (
+            <ArchetypeDetail
+              archetype={selectedArchetype || allArchetypes[0]}
+              onBack={() => setCurrentView('list')}
+            />
+          ) : (
+            <>
+              {/* Page Title - Top search and status filter field REMOVED per user request */}
+              <div className="page-header">
+                <div className="page-title-box">
+                  <h1>
+                    {activeTab === 'all'
+                      ? 'Archetype List'
+                      : 'My Approval Actions'}
+                  </h1>
+                  <p>
+                    {activeTab === 'all'
+                      ? 'Select an archetype to view its L3 Visio diagram'
+                      : 'Archetypes requiring your approval or action'}
+                  </p>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Metric KPI Cards */}
-          <div className="stat-cards-grid">
-            <div className="stat-card-container">
-              <StatCard label="Total Archetypes" value="12" variant="total" />
-              <StatCard label="Not Generated" value="1" variant="not-generated" />
-              <StatCard label="In Approval" value="3" variant="in-approval" />
-              <StatCard label="Approved" value="6" variant="approved" />
-              <StatCard label="Reopened" value="1" variant="reopened" />
-            </div>
+              {/* MSCL Archetype Search Card (above table) */}
+              <SearchCard
+                onOpenAdvancedSearch={() => setIsAdvancedSearchOpen(true)}
+                onSearch={handleBasicSearch}
+                onReset={handleResetSearch}
+              />
 
-            <button
-              className="btn-export"
-              onClick={() => handleActionClick('Export List')}
-            >
-              <Download size={16} />
-              <span>Export List</span>
-            </button>
-          </div>
+              {/* Metric KPI Cards (Matching Screenshot 3) */}
+              <div className="stat-cards-grid">
+                <div className="stat-card-container">
+                  <StatCard label="Total Archetypes" value={String(totalCount)} variant="total" />
+                  <StatCard label="New" value={String(newCount)} variant="not-generated" />
+                  <StatCard label="In Review" value={String(inReviewCount)} variant="in-approval" />
+                  <StatCard label="Approved" value={String(approvedCount)} variant="approved" />
+                </div>
 
-          {/* MSCL Archetype Search Card */}
-          <SearchCard
-            onOpenAdvancedSearch={() => setIsAdvancedSearchOpen(true)}
-            onSearch={handleBasicSearch}
-            onReset={() => handleActionClick('Search Filters Reset')}
-          />
+                <button
+                  className="btn-export"
+                  onClick={() => handleActionClick('Export List')}
+                >
+                  <Download size={16} />
+                  <span>Export List</span>
+                </button>
+              </div>
 
-          {/* Table Component */}
-          <ArchetypeTable onActionClick={handleActionClick} />
+              {/* Table Component with Initial Hardcoded Data & only + Create button */}
+              <ArchetypeTable
+                archetypes={filteredArchetypes}
+                onActionClick={handleActionClick}
+                onCodeClick={handleCodeClick}
+                onCreateClick={handleCreateClick}
+              />
+            </>
+          )}
         </main>
       </div>
 

@@ -36,7 +36,7 @@ export default function SearchCard({ onOpenAdvancedSearch, onSearch, onReset }) 
   return (
     <section className="search-section">
       <div className="search-section-header">
-        <h2>MSCL Archetype Search</h2>
+        <h2>Archetype Search</h2>
         <p>Search and filter archetypes using basic or advanced criteria</p>
       </div>
 

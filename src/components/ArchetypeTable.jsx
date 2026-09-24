@@ -1,137 +1,43 @@
 import React, { useState } from 'react';
-import { ArrowDown, ArrowUp, ThumbsUp, Database, FileText } from 'lucide-react';
+import { ArrowDown, ArrowUp, RefreshCw, Eye, Plus, Database } from 'lucide-react';
+import { initialArchetypesData } from '../data/archetypesData';
 
-export default function ArchetypeTable({ onActionClick }) {
-  // Wireframe sample data ready for future API binding
-  const sampleWireframeData = [
-    {
-      code: 'L3J1',
-      laneId: '10147',
-      title: 'USROTC DCs - JnJ Japan',
-      legalEntities: '6040 - ETHICON US, LLC | 8525 - CILAG GMBH INTERNATIONAL | 8235 - JOHNSON & JOHNSON K. K.',
-      pfcStatus: 'New',
-      visioStatus: 'Approval In Progress',
-      visioClass: 'in-progress',
-      approvals: { approved: 2, total: 3 },
-      lastUpdate: '2026/02/10',
-      updatedBy: 'Bruno Oliveira',
-      actionType: 'view'
-    },
-    {
-      code: 'L3KR',
-      laneId: '20201',
-      title: 'USROTC DCs - JnJ Korea',
-      legalEntities: '6040 - ETHICON US, LLC | 4150 - JOHNSON & JOHNSON KOREA',
-      pfcStatus: 'Approved',
-      visioStatus: 'Approved',
-      visioClass: 'approved',
-      approvals: { approved: 3, total: 3 },
-      lastUpdate: '2026/01/15',
-      updatedBy: 'Maria Santos',
-      actionType: 'view'
-    },
-    {
-      code: 'E3EU',
-      laneId: '30401',
-      title: 'Ethicon MX Export - CILAG EU',
-      legalEntities: '4010 - ETHICON JUAREZ | 8525 - CILAG GMBH INTERNATIONAL',
-      pfcStatus: 'New',
-      visioStatus: 'New',
-      visioClass: 'new',
-      approvals: { approved: 0, total: 3 },
-      lastUpdate: '2026/03/02',
-      updatedBy: '',
-      actionType: 'generate'
-    },
-    {
-      code: 'D3AN',
-      laneId: '40601',
-      title: 'DePuy Synthes - ANZ Distribution',
-      legalEntities: '5020 - DEPUY SYNTHES US | 9100 - J&J MEDICAL AUSTRALIA',
-      pfcStatus: 'New',
-      visioStatus: 'Approval In Progress',
-      visioClass: 'in-progress',
-      approvals: { approved: 1, total: 3 },
-      lastUpdate: '2026/02/20',
-      updatedBy: 'Tom Bradley',
-      actionType: 'view'
-    },
-    {
-      code: 'C3BR',
-      laneId: '50812',
-      title: 'Cordis Brazil - LatAm Hub',
-      legalEntities: '7010 - CORDIS LLC US | 3200 - JOHNSON & JOHNSON BRAZIL',
-      pfcStatus: 'New',
-      visioStatus: 'Draft',
-      visioClass: 'draft',
-      approvals: { approved: 0, total: 3 },
-      lastUpdate: '2026/03/28',
-      updatedBy: '',
-      actionType: 'view'
-    },
-    {
-      code: 'V3IN',
-      laneId: '60314',
-      title: 'Vision Care India - Affiliate DC',
-      legalEntities: '6200 - J&J VISION CARE US | 8800 - JOHNSON & JOHNSON INDIA',
-      pfcStatus: 'New',
-      visioStatus: 'Ready for Approval',
-      visioClass: 'ready',
-      approvals: { approved: 0, total: 3 },
-      lastUpdate: '2026/04/05',
-      updatedBy: 'Priya Nair',
-      actionType: 'view'
-    },
-    {
-      code: 'M3AU',
-      laneId: '70528',
-      title: 'MedTech Australia - Reopened Review',
-      legalEntities: '7100 - JOHNSON & JOHNSON AUSTRALIA | 7200 - DEPUY SYNTHES AU',
-      pfcStatus: 'New',
-      visioStatus: 'Reopened',
-      visioClass: 'reopened',
-      approvals: { approved: 0, total: 3 },
-      lastUpdate: '2026/09/10',
-      updatedBy: 'Anna Mueller',
-      actionType: 'view'
-    },
-    {
-      code: 'B3SG',
-      laneId: '80215',
-      title: 'Biosense Webster - Singapore Hub',
-      legalEntities: '3100 - BIOSENSE WEBSTER INC | 9200 - J&J MEDICAL SINGAPORE',
-      pfcStatus: 'Approved',
-      visioStatus: 'Approved',
-      visioClass: 'approved',
-      approvals: { approved: 3, total: 3 },
-      lastUpdate: '2026/06/12',
-      updatedBy: 'Wei Liang',
-      actionType: 'view'
-    }
-  ];
-
-  // Default table state is BLANK per requirements
-  const [showPreviewData, setShowPreviewData] = useState(false);
-  const data = showPreviewData ? sampleWireframeData : [];
+export default function ArchetypeTable({
+  archetypes = initialArchetypesData,
+  onActionClick,
+  onCodeClick,
+  onCreateClick
+}) {
+  const [selectedRowId, setSelectedRowId] = useState('1');
 
   return (
     <div className="table-card">
-      <div className="toggle-data-bar">
-        <span>
-          <strong>Table Status:</strong> {showPreviewData ? 'Showing Sample Data' : 'Blank (Ready for API)'}
-        </span>
-        <button
-          className="toggle-data-btn"
-          onClick={() => setShowPreviewData(!showPreviewData)}
-        >
-          {showPreviewData ? 'Clear Table Data (Keep Blank)' : 'Preview Wireframe Mock Data'}
-        </button>
+      {/* Table Toolbar Header - ONLY + Create button */}
+      <div className="table-card-toolbar">
+        <div className="table-toolbar-left">
+          <h3 className="table-section-title">Archetype List</h3>
+          <span className="table-results-count">
+            — {archetypes.length} {archetypes.length === 1 ? 'result' : 'results'} found
+          </span>
+        </div>
+
+        <div className="table-toolbar-right">
+          <button
+            type="button"
+            className="btn-create-archetype"
+            onClick={onCreateClick}
+          >
+            <Plus size={15} />
+            <span>Create</span>
+          </button>
+        </div>
       </div>
 
       <div className="table-wrapper">
         <table className="archetype-table">
           <thead>
             <tr>
+              <th style={{ width: '40px' }}></th>
               <th>Code</th>
               <th>Lane ID</th>
               <th>Title</th>
@@ -144,107 +50,168 @@ export default function ArchetypeTable({ onActionClick }) {
             </tr>
           </thead>
           <tbody>
-            {data.length === 0 ? (
+            {archetypes.length === 0 ? (
               <tr>
-                <td colSpan="9">
+                <td colSpan="10">
                   <div className="empty-table-container">
                     <div className="empty-icon-wrapper">
                       <Database size={28} />
                     </div>
-                    <div className="empty-title">Table is currently blank</div>
+                    <div className="empty-title">No Archetypes Found</div>
                     <div className="empty-desc">
-                      The table structure is built and ready. Data will load here once the backend API is connected.
+                      No archetypes match your current search criteria. Try resetting the filters.
                     </div>
                   </div>
                 </td>
               </tr>
             ) : (
-              data.map((row, index) => (
-                <tr key={index}>
-                  <td className="code-cell">{row.code}</td>
-                  <td className="lane-cell">{row.laneId}</td>
-                  <td className="title-cell">{row.title}</td>
-                  <td className="legal-entities-cell">{row.legalEntities}</td>
-                  <td>
-                    <div className={`pfc-status ${row.pfcStatus.toLowerCase()}`}>
-                      <span className="dot"></span>
-                      <span>{row.pfcStatus}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`visio-pill ${row.visioClass}`}>
-                      {row.visioStatus}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="approval-steps">
-                      <div className="approval-circles">
-                        {[1, 2, 3].map((step) => (
-                          <div
-                            key={step}
-                            className={`approval-circle ${
-                              step <= row.approvals.approved ? 'approved' : 'pending'
-                            }`}
-                          >
-                            {step}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="approval-subtext">
-                        {row.approvals.approved} / {row.approvals.total} approved
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div>{row.lastUpdate}</div>
-                    {row.updatedBy && (
-                      <div style={{ fontSize: '10px', color: '#94A3B8' }}>
-                        by {row.updatedBy}
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <div className="table-actions">
-                      {row.actionType === 'generate' ? (
+              archetypes.map((row, index) => {
+                const isFirstRow = index === 0;
+                return (
+                  <tr
+                    key={row.id || index}
+                    className={selectedRowId === row.id ? 'row-selected' : ''}
+                  >
+                    {/* Radio Select Dot */}
+                    <td className="select-cell">
+                      <input
+                        type="radio"
+                        name="archetype-row-select"
+                        checked={selectedRowId === row.id}
+                        onChange={() => setSelectedRowId(row.id)}
+                        className="row-radio-input"
+                      />
+                    </td>
+
+                    {/* Code Column - First row is clickable to redirect */}
+                    <td className="code-cell">
+                      {isFirstRow ? (
                         <button
-                          className="btn-generate"
-                          onClick={() => onActionClick('Generate', row.code)}
+                          type="button"
+                          className="code-link-btn"
+                          onClick={() => onCodeClick && onCodeClick(row)}
+                          title="Click to view Archetype Detail & Visio Diagram"
                         >
-                          Generate
+                          <span className="code-primary">{row.codeLines?.[0] || row.code}</span>
+                          {row.codeLines?.[1] && (
+                            <span className="code-sub">{row.codeLines[1]}</span>
+                          )}
+                          {row.codeLines?.[2] && (
+                            <span className="code-sub">{row.codeLines[2]}</span>
+                          )}
                         </button>
                       ) : (
-                        <button
-                          className="btn-view"
-                          onClick={() => onActionClick('View Diagram', row.code)}
-                        >
-                          View
-                        </button>
+                        <div className="code-stacked">
+                          <span className="code-primary">{row.codeLines?.[0] || row.code}</span>
+                          {row.codeLines?.[1] && (
+                            <span className="code-sub">{row.codeLines[1]}</span>
+                          )}
+                          {row.codeLines?.[2] && (
+                            <span className="code-sub">{row.codeLines[2]}</span>
+                          )}
+                        </div>
                       )}
-                      <button
-                        className="btn-icon-sm"
-                        onClick={() => onActionClick('Download', row.code)}
-                      >
-                        <ArrowDown size={12} />
-                      </button>
-                      <button
-                        className="btn-icon-sm"
-                        onClick={() => onActionClick('Re-order Up', row.code)}
-                      >
-                        <ArrowUp size={12} />
-                      </button>
-                      {(row.visioStatus === 'Approval In Progress' || row.visioStatus === 'Ready for Approval') && (
-                        <button
-                          className="btn-icon-sm"
-                          style={{ color: '#D97706' }}
-                          onClick={() => onActionClick('Approve Permission', row.code)}
-                        >
-                          <ThumbsUp size={12} />
-                        </button>
+                    </td>
+
+                    {/* Lane ID */}
+                    <td className="lane-cell">
+                      <span className="lane-id-pill">{row.laneId}</span>
+                    </td>
+
+                    {/* Title */}
+                    <td className="title-cell">
+                      <strong>{row.title}</strong>
+                    </td>
+
+                    {/* Legal Entities */}
+                    <td className="legal-entities-cell">{row.legalEntities}</td>
+
+                    {/* PFC Status */}
+                    <td>
+                      <div className={`pfc-status ${row.pfcStatus?.toLowerCase().replace(/\s+/g, '-')}`}>
+                        <span className={`status-dot ${row.pfcStatusClass || ''}`}></span>
+                        <span>{row.pfcStatus}</span>
+                      </div>
+                    </td>
+
+                    {/* L3 Visio Status */}
+                    <td>
+                      <span className={`visio-pill ${row.visioClass || 'in-progress'}`}>
+                        {row.visioStatus}
+                      </span>
+                    </td>
+
+                    {/* Approvals */}
+                    <td>
+                      <div className="approval-steps">
+                        <div className="approval-circles">
+                          {[1, 2, 3].map((step) => {
+                            const isApproved = step <= (row.approvals?.approved || 0);
+                            return (
+                              <div
+                                key={step}
+                                className={`approval-circle ${isApproved ? 'approved' : 'pending'}`}
+                              >
+                                {step}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="approval-subtext">
+                          {row.approvals?.approved || 0} / {row.approvals?.total || 3} approved
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Last Update */}
+                    <td>
+                      <div className="update-date">{row.lastUpdate}</div>
+                      {row.updatedBy && (
+                        <div className="update-author">by {row.updatedBy}</div>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+
+                    {/* Actions Column */}
+                    <td>
+                      <div className="table-actions-group">
+                        <div className="action-row-top">
+                          <button
+                            type="button"
+                            className="btn-view"
+                            onClick={() => onActionClick('View Diagram', row.code)}
+                          >
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-icon-sm"
+                            title="Download"
+                            onClick={() => onActionClick('Download', row.code)}
+                          >
+                            <ArrowDown size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-icon-sm"
+                            title="Move Up"
+                            onClick={() => onActionClick('Re-order Up', row.code)}
+                          >
+                            <ArrowUp size={12} />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-replace"
+                          onClick={() => onActionClick('Replace Archetype', row.code)}
+                        >
+                          <RefreshCw size={11} />
+                          <span>Replace</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
