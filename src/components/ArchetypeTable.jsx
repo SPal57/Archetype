@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowDown, ArrowUp, RefreshCw, Eye, Plus, Database } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ArrowDown, ArrowUp, RefreshCw, Plus, Database, ChevronDown, Copy, AlertCircle, Download } from 'lucide-react';
 import { initialArchetypesData } from '../data/archetypesData';
 
 export default function ArchetypeTable({
@@ -8,28 +8,171 @@ export default function ArchetypeTable({
   onCodeClick,
   onCreateClick
 }) {
-  const [selectedRowId, setSelectedRowId] = useState('1');
+  // Support multiple selected row IDs (for multi-download)
+  const [selectedRowIds, setSelectedRowIds] = useState([]);
+  const [warningMessage, setWarningMessage] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Handle individual row checkbox toggle (multi-select)
+  const handleToggleRow = (rowId) => {
+    setSelectedRowIds((prev) => {
+      const next = prev.includes(rowId) ? prev.filter((id) => id !== rowId) : [...prev, rowId];
+      // Automatically clear warning once valid single-row selection is reached
+      if (next.length === 1 && warningMessage) {
+        setWarningMessage('');
+      }
+      return next;
+    });
+  };
+
+  // Handle Select All / Deselect All
+  const handleToggleSelectAll = () => {
+    if (selectedRowIds.length === archetypes.length) {
+      setSelectedRowIds([]);
+    } else {
+      setSelectedRowIds(archetypes.map((a) => a.id));
+    }
+    setWarningMessage('');
+  };
+
+  const handleSelectCreateOption = (mode) => {
+    setIsDropdownOpen(false);
+
+    if (mode === 'blank') {
+      if (onCreateClick) {
+        onCreateClick('blank', null);
+      }
+      return;
+    }
+
+    if (mode === 'clone') {
+      // 1. If 0 rows selected -> prompt to select a row first
+      if (selectedRowIds.length === 0) {
+        setWarningMessage('Select a row first');
+        return;
+      }
+
+      // 2. If more than 1 row selected -> prompt that multiple rows cannot be cloned
+      if (selectedRowIds.length > 1) {
+        setWarningMessage("You can't clone more than one archetype at one time");
+        return;
+      }
+
+      // 3. Exactly 1 row selected -> proceed to clone
+      setWarningMessage('');
+      const selectedItem = archetypes.find((a) => a.id === selectedRowIds[0]);
+      if (onCreateClick) {
+        onCreateClick('clone', selectedItem);
+      }
+    }
+  };
+
+  const isAllSelected = archetypes.length > 0 && selectedRowIds.length === archetypes.length;
 
   return (
     <div className="table-card">
-      {/* Table Toolbar Header - ONLY + Create button */}
+      {/* Table Toolbar Header */}
       <div className="table-card-toolbar">
         <div className="table-toolbar-left">
           <h3 className="table-section-title">Archetype List</h3>
           <span className="table-results-count">
             — {archetypes.length} {archetypes.length === 1 ? 'result' : 'results'} found
           </span>
+          {selectedRowIds.length > 0 && (
+            <span className="selected-count-badge">
+              ({selectedRowIds.length} selected)
+            </span>
+          )}
         </div>
 
-        <div className="table-toolbar-right">
+        {/* Right Toolbar: Warning Prompt, Download Button, and + Create Dropdown */}
+        <div className="table-toolbar-right" ref={dropdownRef}>
+          {/* Dynamic Warning Prompt (0 rows OR >1 row for clone) */}
+          {warningMessage && (
+            <div className="select-row-warning-pill">
+              <AlertCircle size={14} className="warning-pill-icon" />
+              <span>{warningMessage}</span>
+            </div>
+          )}
+
+          {/* Download Button (Supports single and multiple selected rows) */}
           <button
             type="button"
-            className="btn-create-archetype"
-            onClick={onCreateClick}
+            className="btn-table-download"
+            onClick={() => {
+              const count = selectedRowIds.length;
+              if (onActionClick) {
+                onActionClick(
+                  'Download Excel',
+                  count > 0 ? `${count} selected archetype(s)` : 'All archetypes'
+                );
+              }
+            }}
+            title={selectedRowIds.length > 0 ? `Download ${selectedRowIds.length} selected row(s)` : 'Download archetypes as Excel'}
           >
-            <Plus size={15} />
-            <span>Create</span>
+            <Download size={14} />
+            <span>Download</span>
           </button>
+
+          {/* Create Button with Dropdown */}
+          <div className="create-dropdown-container">
+            <button
+              type="button"
+              className="btn-create-archetype btn-create-dropdown-toggle"
+              onClick={() => setIsDropdownOpen((prev) => !prev)}
+              aria-expanded={isDropdownOpen}
+            >
+              <Plus size={15} />
+              <span>Create</span>
+              <ChevronDown size={14} className={`dropdown-chevron ${isDropdownOpen ? 'rotated' : ''}`} />
+            </button>
+
+            {isDropdownOpen && (
+              <div className="create-dropdown-menu">
+                {/* 1. Blank Create */}
+                <button
+                  type="button"
+                  className="create-dropdown-item"
+                  onClick={() => handleSelectCreateOption('blank')}
+                >
+                  <div className="dropdown-item-icon">
+                    <Plus size={18} />
+                  </div>
+                  <div className="dropdown-item-text">
+                    <div className="dropdown-item-title">Create</div>
+                    <div className="dropdown-item-desc">Start with a blank form</div>
+                  </div>
+                </button>
+
+                {/* 2. Create with Reference (Clone) */}
+                <button
+                  type="button"
+                  className="create-dropdown-item"
+                  onClick={() => handleSelectCreateOption('clone')}
+                >
+                  <div className="dropdown-item-icon">
+                    <Copy size={17} />
+                  </div>
+                  <div className="dropdown-item-text">
+                    <div className="dropdown-item-title">Create with Reference</div>
+                    <div className="dropdown-item-desc">Copy from selected row</div>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -37,7 +180,16 @@ export default function ArchetypeTable({
         <table className="archetype-table">
           <thead>
             <tr>
-              <th style={{ width: '40px' }}></th>
+              {/* Header Checkbox (Select / Deselect All) */}
+              <th style={{ width: '40px' }} className="select-cell">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={handleToggleSelectAll}
+                  className="row-select-checkbox"
+                  title={isAllSelected ? 'Deselect all rows' : 'Select all rows'}
+                />
+              </th>
               <th>Code</th>
               <th>Lane ID</th>
               <th>Title</th>
@@ -67,19 +219,21 @@ export default function ArchetypeTable({
             ) : (
               archetypes.map((row, index) => {
                 const isFirstRow = index === 0;
+                const isSelected = selectedRowIds.includes(row.id);
+
                 return (
                   <tr
                     key={row.id || index}
-                    className={selectedRowId === row.id ? 'row-selected' : ''}
+                    className={isSelected ? 'row-selected' : ''}
                   >
-                    {/* Radio Select Dot */}
+                    {/* Multi-Select Checkbox */}
                     <td className="select-cell">
                       <input
-                        type="radio"
-                        name="archetype-row-select"
-                        checked={selectedRowId === row.id}
-                        onChange={() => setSelectedRowId(row.id)}
-                        className="row-radio-input"
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleRow(row.id)}
+                        className="row-select-checkbox"
+                        title={isSelected ? 'Deselect this row' : 'Select this row'}
                       />
                     </td>
 
@@ -90,7 +244,7 @@ export default function ArchetypeTable({
                           type="button"
                           className="code-link-btn"
                           onClick={() => onCodeClick && onCodeClick(row)}
-                          title="Click to view Archetype Detail & Visio Diagram"
+                          title="Click to view Archetype Detail"
                         >
                           <span className="code-primary">{row.codeLines?.[0] || row.code}</span>
                           {row.codeLines?.[1] && (

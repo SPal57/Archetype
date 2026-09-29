@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Download, Edit2, FileText, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Download, Edit2, Trash2, FileText, ChevronDown, Plus, X } from 'lucide-react';
 
 export default function ArchetypeDetail({ archetype, onBack }) {
   const [selectedCounterId, setSelectedCounterId] = useState('CTR-001');
@@ -23,7 +23,7 @@ export default function ArchetypeDetail({ archetype, onBack }) {
     l1FinancialFlow: 'USD -> JPY (T+2)'
   };
 
-  const counters = [
+  const [counters, setCounters] = useState([
     {
       counterId: 'CTR-001',
       patternId: 'P-V-P',
@@ -38,9 +38,9 @@ export default function ArchetypeDetail({ archetype, onBack }) {
       destination: 'M',
       laneMaster: 'LM-103'
     }
-  ];
+  ]);
 
-  const nodes = [
+  const [nodes, setNodes] = useState([
     {
       archetype: 'ARC-0001',
       uniqueId: 'NU-10021',
@@ -74,7 +74,118 @@ export default function ArchetypeDetail({ archetype, onBack }) {
       description: 'Final Delivery Point',
       incoTerm: 'DAP'
     }
-  ];
+  ]);
+
+  // Modals for Counter & Node Edit/Add
+  const [counterModal, setCounterModal] = useState({
+    isOpen: false,
+    isEdit: false,
+    index: -1,
+    data: { counterId: '', patternId: 'P-V-P', origin: '', destination: '', laneMaster: '' }
+  });
+
+  const [nodeModal, setNodeModal] = useState({
+    isOpen: false,
+    isEdit: false,
+    index: -1,
+    data: {
+      archetype: '',
+      uniqueId: '',
+      nodeId: '',
+      type: 'P',
+      typeColor: 'purple',
+      purpose: 'M',
+      purposeColor: 'green',
+      description: '',
+      incoTerm: 'EXW'
+    }
+  });
+
+  // Counter Handlers
+  const handleRemoveCounter = (idx, e) => {
+    e.stopPropagation();
+    setCounters((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleOpenAddCounter = () => {
+    const nextId = `CTR-00${counters.length + 1}`;
+    setCounterModal({
+      isOpen: true,
+      isEdit: false,
+      index: -1,
+      data: { counterId: nextId, patternId: 'P-V-P', origin: 'M', destination: 'DC', laneMaster: 'LM-104' }
+    });
+  };
+
+  const handleOpenEditCounter = (ctr, idx, e) => {
+    e.stopPropagation();
+    setCounterModal({
+      isOpen: true,
+      isEdit: true,
+      index: idx,
+      data: { ...ctr }
+    });
+  };
+
+  const handleSaveCounterModal = (e) => {
+    e.preventDefault();
+    if (counterModal.isEdit) {
+      setCounters((prev) =>
+        prev.map((item, i) => (i === counterModal.index ? counterModal.data : item))
+      );
+    } else {
+      setCounters((prev) => [...prev, counterModal.data]);
+    }
+    setCounterModal({ isOpen: false, isEdit: false, index: -1, data: {} });
+  };
+
+  // Node Handlers
+  const handleRemoveNode = (idx, e) => {
+    e.stopPropagation();
+    setNodes((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleOpenAddNode = () => {
+    const nextNum = String(nodes.length + 1).padStart(2, '0');
+    setNodeModal({
+      isOpen: true,
+      isEdit: false,
+      index: -1,
+      data: {
+        archetype: detailData.archetypeId,
+        uniqueId: `NU-1002${nodes.length + 1}`,
+        nodeId: nextNum,
+        type: 'P',
+        typeColor: 'purple',
+        purpose: 'M',
+        purposeColor: 'green',
+        description: 'New Fulfillment Node',
+        incoTerm: 'DAP'
+      }
+    });
+  };
+
+  const handleOpenEditNode = (node, idx, e) => {
+    e.stopPropagation();
+    setNodeModal({
+      isOpen: true,
+      isEdit: true,
+      index: idx,
+      data: { ...node }
+    });
+  };
+
+  const handleSaveNodeModal = (e) => {
+    e.preventDefault();
+    if (nodeModal.isEdit) {
+      setNodes((prev) =>
+        prev.map((item, i) => (i === nodeModal.index ? nodeModal.data : item))
+      );
+    } else {
+      setNodes((prev) => [...prev, nodeModal.data]);
+    }
+    setNodeModal({ isOpen: false, isEdit: false, index: -1, data: {} });
+  };
 
   return (
     <div className="archetype-detail-view">
@@ -102,7 +213,7 @@ export default function ArchetypeDetail({ archetype, onBack }) {
           <button
             type="button"
             className="btn-detail-edit"
-            onClick={() => alert('Edit Archetype ' + detailData.code)}
+            onClick={() => alert('Editing mode enabled')}
           >
             <Edit2 size={13} />
             <span>Edit</span>
@@ -180,9 +291,9 @@ export default function ArchetypeDetail({ archetype, onBack }) {
         <div className="create-grid-3" style={{ marginTop: '16px' }}>
           <div className="form-group">
             <label>
-              Nodes <span className="label-badge">5</span>
+              Nodes <span className="label-badge">{nodes.length}</span>
             </label>
-            <input type="text" value={detailData.nodesCount} readOnly className="read-only-input" />
+            <input type="text" value={`${nodes.length} nodes defined`} readOnly className="read-only-input" />
           </div>
           <div className="form-group">
             <label>Attachment</label>
@@ -217,8 +328,16 @@ export default function ArchetypeDetail({ archetype, onBack }) {
       <div className="create-card">
         <div className="create-card-header-row">
           <div className="create-card-section-title">
-            COUNTER <span className="label-badge">2</span>
+            COUNTER <span className="label-badge">{counters.length}</span>
           </div>
+          <button
+            type="button"
+            className="btn-secondary-action"
+            onClick={handleOpenAddCounter}
+          >
+            <Plus size={14} />
+            <span>Add</span>
+          </button>
         </div>
 
         <div className="table-wrapper detail-subtable-wrapper">
@@ -230,10 +349,11 @@ export default function ArchetypeDetail({ archetype, onBack }) {
                 <th>ORIGIN</th>
                 <th>DESTINATION</th>
                 <th>LANE MASTER</th>
+                <th style={{ textAlign: 'right', width: '80px' }}>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
-              {counters.map((ctr) => (
+              {counters.map((ctr, idx) => (
                 <tr
                   key={ctr.counterId}
                   className={selectedCounterId === ctr.counterId ? 'detail-row-selected' : ''}
@@ -246,6 +366,26 @@ export default function ArchetypeDetail({ archetype, onBack }) {
                   <td>{ctr.origin}</td>
                   <td>{ctr.destination}</td>
                   <td>{ctr.laneMaster}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <div className="row-action-buttons">
+                      <button
+                        type="button"
+                        className="btn-row-edit"
+                        title="Edit Counter"
+                        onClick={(e) => handleOpenEditCounter(ctr, idx, e)}
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-row-remove"
+                        title="Remove Counter"
+                        onClick={(e) => handleRemoveCounter(idx, e)}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -257,8 +397,16 @@ export default function ArchetypeDetail({ archetype, onBack }) {
       <div className="create-card">
         <div className="create-card-header-row">
           <div className="create-card-section-title">
-            NODES <span className="label-badge-pill">P-V-P</span> <span className="nodes-item-count">3 items</span>
+            NODES <span className="label-badge-pill">P-V-P</span> <span className="nodes-item-count">{nodes.length} items</span>
           </div>
+          <button
+            type="button"
+            className="btn-secondary-action"
+            onClick={handleOpenAddNode}
+          >
+            <Plus size={14} />
+            <span>Add</span>
+          </button>
         </div>
 
         <div className="table-wrapper detail-subtable-wrapper">
@@ -272,11 +420,12 @@ export default function ArchetypeDetail({ archetype, onBack }) {
                 <th>PURPOSE</th>
                 <th>DESCRIPTION</th>
                 <th>INCO TERM</th>
+                <th style={{ textAlign: 'right', width: '80px' }}>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
-              {nodes.map((node) => (
-                <tr key={node.nodeId}>
+              {nodes.map((node, idx) => (
+                <tr key={node.uniqueId || idx}>
                   <td>{node.archetype}</td>
                   <td>{node.uniqueId}</td>
                   <td>{node.nodeId}</td>
@@ -288,6 +437,26 @@ export default function ArchetypeDetail({ archetype, onBack }) {
                   </td>
                   <td>{node.description}</td>
                   <td>{node.incoTerm}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <div className="row-action-buttons">
+                      <button
+                        type="button"
+                        className="btn-row-edit"
+                        title="Edit Node"
+                        onClick={(e) => handleOpenEditNode(node, idx, e)}
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-row-remove"
+                        title="Remove Node"
+                        onClick={(e) => handleRemoveNode(idx, e)}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -302,6 +471,248 @@ export default function ArchetypeDetail({ archetype, onBack }) {
           <span>Back to Results</span>
         </button>
       </div>
+
+      {/* Edit / Add Counter Modal */}
+      {counterModal.isOpen && (
+        <div className="modal-backdrop">
+          <div className="subitem-modal">
+            <div className="modal-header">
+              <h3>{counterModal.isEdit ? 'Edit Counter' : 'Add New Counter'}</h3>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setCounterModal({ isOpen: false, isEdit: false, index: -1, data: {} })}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveCounterModal} className="modal-form-body">
+              <div className="form-group">
+                <label>Counter ID</label>
+                <input
+                  type="text"
+                  required
+                  value={counterModal.data.counterId}
+                  onChange={(e) =>
+                    setCounterModal((prev) => ({
+                      ...prev,
+                      data: { ...prev.data, counterId: e.target.value }
+                    }))
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Pattern ID</label>
+                <select
+                  value={counterModal.data.patternId}
+                  onChange={(e) =>
+                    setCounterModal((prev) => ({
+                      ...prev,
+                      data: { ...prev.data, patternId: e.target.value }
+                    }))
+                  }
+                >
+                  <option value="P-V-P">P-V-P</option>
+                  <option value="P-FP">P-FP</option>
+                  <option value="P-P">P-P</option>
+                </select>
+              </div>
+              <div className="two-col-grid">
+                <div className="form-group">
+                  <label>Origin</label>
+                  <input
+                    type="text"
+                    required
+                    value={counterModal.data.origin}
+                    onChange={(e) =>
+                      setCounterModal((prev) => ({
+                        ...prev,
+                        data: { ...prev.data, origin: e.target.value }
+                      }))
+                    }
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Destination</label>
+                  <input
+                    type="text"
+                    required
+                    value={counterModal.data.destination}
+                    onChange={(e) =>
+                      setCounterModal((prev) => ({
+                        ...prev,
+                        data: { ...prev.data, destination: e.target.value }
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Lane Master</label>
+                <input
+                  type="text"
+                  required
+                  value={counterModal.data.laneMaster}
+                  onChange={(e) =>
+                    setCounterModal((prev) => ({
+                      ...prev,
+                      data: { ...prev.data, laneMaster: e.target.value }
+                    }))
+                  }
+                />
+              </div>
+              <div className="modal-actions-footer">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setCounterModal({ isOpen: false, isEdit: false, index: -1, data: {} })}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-modal-apply">
+                  {counterModal.isEdit ? 'Save Changes' : 'Add Counter'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit / Add Node Modal */}
+      {nodeModal.isOpen && (
+        <div className="modal-backdrop">
+          <div className="subitem-modal">
+            <div className="modal-header">
+              <h3>{nodeModal.isEdit ? 'Edit Node' : 'Add New Node'}</h3>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setNodeModal({ isOpen: false, isEdit: false, index: -1, data: {} })}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveNodeModal} className="modal-form-body">
+              <div className="two-col-grid">
+                <div className="form-group">
+                  <label>Unique ID</label>
+                  <input
+                    type="text"
+                    required
+                    value={nodeModal.data.uniqueId}
+                    onChange={(e) =>
+                      setNodeModal((prev) => ({
+                        ...prev,
+                        data: { ...prev.data, uniqueId: e.target.value }
+                      }))
+                    }
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Node ID</label>
+                  <input
+                    type="text"
+                    required
+                    value={nodeModal.data.nodeId}
+                    onChange={(e) =>
+                      setNodeModal((prev) => ({
+                        ...prev,
+                        data: { ...prev.data, nodeId: e.target.value }
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="two-col-grid">
+                <div className="form-group">
+                  <label>Type (e.g. P or V)</label>
+                  <select
+                    value={nodeModal.data.type}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNodeModal((prev) => ({
+                        ...prev,
+                        data: {
+                          ...prev.data,
+                          type: val,
+                          typeColor: val === 'V' ? 'orange' : 'purple'
+                        }
+                      }));
+                    }}
+                  >
+                    <option value="P">P (Plant / Hub)</option>
+                    <option value="V">V (Vendor)</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Purpose (e.g. M or DC)</label>
+                  <select
+                    value={nodeModal.data.purpose}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNodeModal((prev) => ({
+                        ...prev,
+                        data: {
+                          ...prev.data,
+                          purpose: val,
+                          purposeColor: val === 'DC' ? 'amber' : 'green'
+                        }
+                      }));
+                    }}
+                  >
+                    <option value="M">M (Manufacturing)</option>
+                    <option value="DC">DC (Distribution Center)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Description</label>
+                <input
+                  type="text"
+                  required
+                  value={nodeModal.data.description}
+                  onChange={(e) =>
+                    setNodeModal((prev) => ({
+                      ...prev,
+                      data: { ...prev.data, description: e.target.value }
+                    }))
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Inco Term</label>
+                <select
+                  value={nodeModal.data.incoTerm}
+                  onChange={(e) =>
+                    setNodeModal((prev) => ({
+                      ...prev,
+                      data: { ...prev.data, incoTerm: e.target.value }
+                    }))
+                  }
+                >
+                  <option value="EXW">EXW</option>
+                  <option value="CIF">CIF</option>
+                  <option value="DAP">DAP</option>
+                  <option value="FOB">FOB</option>
+                  <option value="DDP">DDP</option>
+                </select>
+              </div>
+              <div className="modal-actions-footer">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setNodeModal({ isOpen: false, isEdit: false, index: -1, data: {} })}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-modal-apply">
+                  {nodeModal.isEdit ? 'Save Changes' : 'Add Node'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

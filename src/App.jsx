@@ -124,12 +124,17 @@ export default function App() {
     setCurrentView('detail');
   };
 
-  // Handle + Create button click
-  const handleCreateClick = () => {
+  const [createMode, setCreateMode] = useState('blank'); // 'blank' | 'clone'
+  const [referenceArchetype, setReferenceArchetype] = useState(null);
+
+  // Handle + Create button click (mode: 'blank' or 'clone')
+  const handleCreateClick = (mode = 'blank', referenceItem = null) => {
+    setCreateMode(mode);
+    setReferenceArchetype(referenceItem);
     setCurrentView('create');
   };
 
-  // Handle Save from Create Archetype form
+  // Handle Save from Create / Clone Archetype form
   const handleSaveArchetype = (newRecord) => {
     const formattedRecord = {
       id: String(Date.now()),
@@ -158,8 +163,8 @@ export default function App() {
     setCurrentView('list');
     setModalState({
       isOpen: true,
-      title: 'Archetype Created Successfully',
-      message: `Lane "${newRecord.csclLaneId}" has been saved and added to the archetype repository.`
+      title: createMode === 'clone' ? 'Archetype Cloned Successfully' : 'Archetype Created Successfully',
+      message: `Lane "${newRecord.csclLaneId}" (${newRecord.archetypeId}) has been successfully saved and added to the repository.`
     });
   };
 
@@ -202,6 +207,9 @@ export default function App() {
         <main className="content-area">
           {currentView === 'create' ? (
             <CreateArchetype
+              mode={createMode}
+              referenceData={referenceArchetype || allArchetypes[0]}
+              existingArchetypes={allArchetypes}
               onBack={() => setCurrentView('list')}
               onSave={handleSaveArchetype}
             />

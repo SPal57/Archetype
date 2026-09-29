@@ -1,7 +1,17 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Search, Plus, Upload, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Search, Plus, Trash2, Edit2, Download, ChevronDown, Check, X } from 'lucide-react';
 
-export default function CreateArchetype({ onBack, onSave }) {
+export default function CreateArchetype({
+  mode = 'blank', // 'blank' | 'clone'
+  referenceData = null,
+  existingArchetypes = [],
+  onBack,
+  onSave
+}) {
+  const isClone = mode === 'clone';
+  const refCode = referenceData?.code || 'L3J1-USROTC-JP';
+
+  // Form Fields State
   const [formData, setFormData] = useState({
     archetypeId: '',
     csclLaneId: '',
@@ -12,27 +22,202 @@ export default function CreateArchetype({ onBack, onSave }) {
     planTeam: '',
     planGrp: '',
     project: '',
+    nodesCount: '',
     attachment: '',
     l1PhysicalFlow: '',
     l1FinancialFlow: ''
   });
 
+  // Counters State
+  const [counters, setCounters] = useState([]);
+
+  // Nodes State
+  const [nodes, setNodes] = useState([]);
+
+  // Errors state
   const [errors, setErrors] = useState({});
+
+  // Modals for Counter & Node Edit/Add
+  const [counterModal, setCounterModal] = useState({
+    isOpen: false,
+    isEdit: false,
+    index: -1,
+    data: { counterId: '', patternId: 'P-V-P', origin: '', destination: '', laneMaster: '' }
+  });
+
+  const [nodeModal, setNodeModal] = useState({
+    isOpen: false,
+    isEdit: false,
+    index: -1,
+    data: {
+      archetype: '',
+      uniqueId: '',
+      nodeId: '',
+      type: 'P',
+      typeColor: 'purple',
+      purpose: 'M',
+      purposeColor: 'green',
+      description: '',
+      incoTerm: 'EXW'
+    }
+  });
+
+  // Initialize data on mount or when mode/referenceData changes
+  useEffect(() => {
+    if (isClone) {
+      setFormData({
+        archetypeId: 'ARC-0001',
+        csclLaneId: 'CSCL-1001',
+        status: 'Draft',
+        owner: 'bruno.oliveira@jnj.com',
+        wave: 'Wave 3',
+        shortDescription: 'US Return to Origin - Japan DCs',
+        planTeam: 'APAC Planning',
+        planGrp: 'PG-JP-01',
+        project: 'PRJ-2026-042',
+        nodesCount: '5 nodes defined',
+        attachment: 'lane_spec_jp.pdf',
+        l1PhysicalFlow: 'US -> JP-DC -> Customer',
+        l1FinancialFlow: 'USD -> JPY (T+2)'
+      });
+
+      setCounters([
+        {
+          counterId: 'CTR-001',
+          patternId: 'P-V-P',
+          origin: 'M',
+          destination: 'DC',
+          laneMaster: 'LM-102'
+        },
+        {
+          counterId: 'CTR-002',
+          patternId: 'P-FP',
+          origin: 'M',
+          destination: 'M',
+          laneMaster: 'LM-103'
+        }
+      ]);
+
+      setNodes([
+        {
+          archetype: 'ARC-0001',
+          uniqueId: 'NU-10021',
+          nodeId: '01',
+          type: 'P',
+          typeColor: 'purple',
+          purpose: 'M',
+          purposeColor: 'green',
+          description: 'Origin Verification',
+          incoTerm: 'EXW'
+        },
+        {
+          archetype: 'ARC-0001',
+          uniqueId: 'NU-10022',
+          nodeId: '02',
+          type: 'V',
+          typeColor: 'orange',
+          purpose: 'DC',
+          purposeColor: 'amber',
+          description: 'Vendor Handoff',
+          incoTerm: 'CIF'
+        },
+        {
+          archetype: 'ARC-0001',
+          uniqueId: 'NU-10023',
+          nodeId: '03',
+          type: 'P',
+          typeColor: 'purple',
+          purpose: 'M',
+          purposeColor: 'green',
+          description: 'Final Delivery Point',
+          incoTerm: 'DAP'
+        }
+      ]);
+    } else {
+      setFormData({
+        archetypeId: '',
+        csclLaneId: '',
+        status: 'Draft',
+        owner: '',
+        wave: '',
+        shortDescription: '',
+        planTeam: '',
+        planGrp: '',
+        project: '',
+        nodesCount: '',
+        attachment: '',
+        l1PhysicalFlow: '',
+        l1FinancialFlow: ''
+      });
+      setCounters([]);
+      setNodes([]);
+    }
+  }, [isClone, referenceData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: false }));
+      setErrors((prev) => ({ ...prev, [name]: null }));
     }
   };
 
+  // Helper to suggest unique IDs when cloning
+  const handleAutoSuggestUniqueIds = () => {
+    const nextNum = Math.floor(Math.random() * 8000) + 1002;
+    setFormData((prev) => ({
+      ...prev,
+      archetypeId: `ARC-${nextNum}`,
+      csclLaneId: `CSCL-${nextNum}`
+    }));
+    setErrors((prev) => ({ ...prev, archetypeId: null, csclLaneId: null }));
+  };
+
+  // Handle Form Submission with Strict Uniqueness Validation
   const handleSubmit = (e) => {
     e.preventDefault();
     const newErrors = {};
-    if (!formData.csclLaneId.trim()) newErrors.csclLaneId = true;
-    if (!formData.owner.trim()) newErrors.owner = true;
-    if (!formData.shortDescription.trim()) newErrors.shortDescription = true;
+
+    // Basic required fields
+    if (!formData.archetypeId.trim()) {
+      newErrors.archetypeId = 'Archetype ID is required';
+    }
+    if (!formData.csclLaneId.trim()) {
+      newErrors.csclLaneId = 'CSCL Lane ID is required';
+    }
+    if (!formData.owner.trim()) {
+      newErrors.owner = 'Owner is required';
+    }
+    if (!formData.shortDescription.trim()) {
+      newErrors.shortDescription = 'Short Description is required';
+    }
+
+    // STRICT UNIQUENESS CHECK for Clone functionality
+    if (isClone) {
+      // 1. Archetype ID cannot be the same as reference archetype (ARC-0001)
+      if (formData.archetypeId.trim().toUpperCase() === 'ARC-0001') {
+        newErrors.archetypeId = 'Archetype ID must be unique (cannot reuse existing ARC-0001)';
+      }
+      // 2. CSCL Lane ID cannot be the same as reference lane (CSCL-1001)
+      if (formData.csclLaneId.trim().toUpperCase() === 'CSCL-1001') {
+        newErrors.csclLaneId = 'CSCL Lane ID must be unique (cannot reuse existing CSCL-1001)';
+      }
+    }
+
+    // Check against any existing archetypes in repository
+    const duplicateArchetype = existingArchetypes.find(
+      (a) => a.code?.toUpperCase() === formData.archetypeId.trim().toUpperCase()
+    );
+    if (duplicateArchetype) {
+      newErrors.archetypeId = `Archetype ID "${formData.archetypeId}" already exists`;
+    }
+
+    const duplicateLane = existingArchetypes.find(
+      (a) => a.laneId === formData.csclLaneId.trim()
+    );
+    if (duplicateLane) {
+      newErrors.csclLaneId = `CSCL Lane ID "${formData.csclLaneId}" already exists`;
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -40,45 +225,170 @@ export default function CreateArchetype({ onBack, onSave }) {
     }
 
     if (onSave) {
-      onSave(formData);
+      onSave({
+        ...formData,
+        counters,
+        nodes
+      });
     }
+  };
+
+  // Counter Handlers
+  const handleRemoveCounter = (idx) => {
+    setCounters((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleOpenAddCounter = () => {
+    const nextId = `CTR-00${counters.length + 1}`;
+    setCounterModal({
+      isOpen: true,
+      isEdit: false,
+      index: -1,
+      data: { counterId: nextId, patternId: 'P-V-P', origin: 'M', destination: 'DC', laneMaster: 'LM-104' }
+    });
+  };
+
+  const handleOpenEditCounter = (ctr, idx) => {
+    setCounterModal({
+      isOpen: true,
+      isEdit: true,
+      index: idx,
+      data: { ...ctr }
+    });
+  };
+
+  const handleSaveCounterModal = (e) => {
+    e.preventDefault();
+    if (counterModal.isEdit) {
+      setCounters((prev) =>
+        prev.map((item, i) => (i === counterModal.index ? counterModal.data : item))
+      );
+    } else {
+      setCounters((prev) => [...prev, counterModal.data]);
+    }
+    setCounterModal({ isOpen: false, isEdit: false, index: -1, data: {} });
+  };
+
+  // Node Handlers
+  const handleRemoveNode = (idx) => {
+    setNodes((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleOpenAddNode = () => {
+    const nextNum = String(nodes.length + 1).padStart(2, '0');
+    setNodeModal({
+      isOpen: true,
+      isEdit: false,
+      index: -1,
+      data: {
+        archetype: formData.archetypeId || 'ARC-0001',
+        uniqueId: `NU-1002${nodes.length + 1}`,
+        nodeId: nextNum,
+        type: 'P',
+        typeColor: 'purple',
+        purpose: 'M',
+        purposeColor: 'green',
+        description: 'New Fulfillment Node',
+        incoTerm: 'DAP'
+      }
+    });
+  };
+
+  const handleOpenEditNode = (node, idx) => {
+    setNodeModal({
+      isOpen: true,
+      isEdit: true,
+      index: idx,
+      data: { ...node }
+    });
+  };
+
+  const handleSaveNodeModal = (e) => {
+    e.preventDefault();
+    if (nodeModal.isEdit) {
+      setNodes((prev) =>
+        prev.map((item, i) => (i === nodeModal.index ? nodeModal.data : item))
+      );
+    } else {
+      setNodes((prev) => [...prev, nodeModal.data]);
+    }
+    setNodeModal({ isOpen: false, isEdit: false, index: -1, data: {} });
   };
 
   return (
     <div className="create-archetype-view">
-      {/* Top Breadcrumb */}
-      <div className="create-breadcrumb">
-        <button type="button" className="btn-back-breadcrumb" onClick={onBack}>
-          <ArrowLeft size={14} />
-          <span>Back to Results</span>
-        </button>
-        <span className="breadcrumb-separator">|</span>
-        <span className="breadcrumb-current">New Archetype</span>
+      {/* Top Breadcrumb & Actions */}
+      <div className="detail-top-bar">
+        <div className="create-breadcrumb">
+          <button type="button" className="btn-back-breadcrumb" onClick={onBack}>
+            <ArrowLeft size={14} />
+            <span>Back to Results</span>
+          </button>
+          <span className="breadcrumb-separator">|</span>
+          <span className="breadcrumb-current">
+            {isClone ? `Cloning ${refCode}` : 'New Archetype'}
+          </span>
+        </div>
+
+        {isClone && (
+          <div className="detail-top-actions">
+            <button
+              type="button"
+              className="btn-detail-download"
+              onClick={() => alert(`Downloading specification for ${refCode}`)}
+            >
+              <Download size={13} />
+              <span>Download</span>
+              <ChevronDown size={13} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Page Header */}
       <div className="create-page-header">
-        <h1>Create Archetype</h1>
+        <h1>{isClone ? `Clone — ${refCode}` : 'Create Archetype'}</h1>
         <p>Define a new CSCL Lane ID and its associated patterns and nodes.</p>
       </div>
 
+      {isClone && (
+        <div className="clone-info-alert">
+          <div className="clone-alert-text">
+            <strong>Clone with Reference Mode:</strong> All lane attributes, counters, and nodes have been copied from <code>{refCode}</code>.
+            Please ensure you provide a unique <strong>Archetype ID</strong> and <strong>CSCL Lane ID</strong>.
+          </div>
+          <button
+            type="button"
+            className="btn-suggest-ids"
+            onClick={handleAutoSuggestUniqueIds}
+          >
+            ⚡ Auto-Generate Unique IDs
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
-        {/* Card: Lane Header */}
+        {/* Card 1: LANE HEADER */}
         <div className="create-card">
           <div className="create-card-section-title">LANE HEADER</div>
 
           <div className="create-grid-4">
             {/* Archetype ID */}
-            <div className="form-group">
-              <label htmlFor="archetypeId">Archetype ID</label>
+            <div className={`form-group ${errors.archetypeId ? 'has-error' : ''}`}>
+              <label htmlFor="archetypeId">
+                Archetype ID <span className="req-asterisk">*</span>
+              </label>
               <input
                 type="text"
                 id="archetypeId"
                 name="archetypeId"
-                placeholder="e.g. ARC-0001"
+                placeholder="e.g. ARC-0002"
                 value={formData.archetypeId}
                 onChange={handleChange}
               />
+              {errors.archetypeId && (
+                <span className="error-hint">{errors.archetypeId}</span>
+              )}
             </div>
 
             {/* CSCL Lane ID * */}
@@ -90,12 +400,12 @@ export default function CreateArchetype({ onBack, onSave }) {
                 type="text"
                 id="csclLaneId"
                 name="csclLaneId"
-                placeholder="CSCL-0000"
+                placeholder="CSCL-1002"
                 value={formData.csclLaneId}
                 onChange={handleChange}
               />
               {errors.csclLaneId && (
-                <span className="error-hint">This field is required</span>
+                <span className="error-hint">{errors.csclLaneId}</span>
               )}
             </div>
 
@@ -134,7 +444,7 @@ export default function CreateArchetype({ onBack, onSave }) {
                 <Search size={14} className="inner-search-icon" />
               </div>
               {errors.owner && (
-                <span className="error-hint">This field is required</span>
+                <span className="error-hint">{errors.owner}</span>
               )}
             </div>
           </div>
@@ -170,7 +480,7 @@ export default function CreateArchetype({ onBack, onSave }) {
                 onChange={handleChange}
               />
               {errors.shortDescription && (
-                <span className="error-hint">This field is required</span>
+                <span className="error-hint">{errors.shortDescription}</span>
               )}
             </div>
           </div>
@@ -217,15 +527,15 @@ export default function CreateArchetype({ onBack, onSave }) {
           </div>
 
           <div className="create-grid-3" style={{ marginTop: '16px' }}>
-            {/* Nodes 0 */}
+            {/* Nodes */}
             <div className="form-group">
               <label htmlFor="nodesCount">
-                Nodes <span className="label-badge">0</span>
+                Nodes <span className="label-badge">{nodes.length}</span>
               </label>
               <input
                 type="text"
                 id="nodesCount"
-                placeholder="No nodes defined"
+                value={isClone ? `${nodes.length} nodes defined` : (nodes.length ? `${nodes.length} nodes defined` : 'No nodes defined')}
                 disabled
                 className="disabled-input"
               />
@@ -247,7 +557,7 @@ export default function CreateArchetype({ onBack, onSave }) {
                   type="button"
                   className="btn-browse-file"
                   onClick={() => {
-                    const fakeFileName = 'Archetype_Visio_Flow_' + Date.now().toString().slice(-4) + '.vsdx';
+                    const fakeFileName = `lane_spec_${Date.now().toString().slice(-4)}.pdf`;
                     setFormData((prev) => ({ ...prev, attachment: fakeFileName }));
                   }}
                 >
@@ -286,46 +596,160 @@ export default function CreateArchetype({ onBack, onSave }) {
           </div>
         </div>
 
-        {/* Card: Counter 0 */}
+        {/* Card 2: COUNTER CARD */}
         <div className="create-card" style={{ marginTop: '20px' }}>
           <div className="create-card-header-row">
             <div className="create-card-section-title">
-              COUNTER <span className="label-badge">0</span>
+              COUNTER <span className="label-badge">{counters.length}</span>
             </div>
             <button
               type="button"
               className="btn-secondary-action"
-              onClick={() => alert('Counter created')}
+              onClick={handleOpenAddCounter}
             >
               <Plus size={14} />
               <span>Add</span>
             </button>
           </div>
 
-          <div className="empty-subcard">
-            No counters defined. Click + Add to create one.
-          </div>
+          {counters.length === 0 ? (
+            <div className="empty-subcard">
+              No counters defined. Click + Add to create one.
+            </div>
+          ) : (
+            <div className="table-wrapper detail-subtable-wrapper">
+              <table className="detail-subtable">
+                <thead>
+                  <tr>
+                    <th>COUNTER ID</th>
+                    <th>PATTERN ID</th>
+                    <th>ORIGIN</th>
+                    <th>DESTINATION</th>
+                    <th>LANE MASTER</th>
+                    <th style={{ textAlign: 'right', width: '80px' }}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {counters.map((ctr, idx) => (
+                    <tr key={ctr.counterId || idx}>
+                      <td className="detail-cell-id">{ctr.counterId}</td>
+                      <td>
+                        <span className="detail-pattern-link">{ctr.patternId}</span>
+                      </td>
+                      <td>{ctr.origin}</td>
+                      <td>{ctr.destination}</td>
+                      <td>{ctr.laneMaster}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div className="row-action-buttons">
+                          <button
+                            type="button"
+                            className="btn-row-edit"
+                            title="Edit Counter"
+                            onClick={() => handleOpenEditCounter(ctr, idx)}
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-row-remove"
+                            title="Remove Counter"
+                            onClick={() => handleRemoveCounter(idx)}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
-        {/* Card: Nodes 0 Items */}
+        {/* Card 3: NODES CARD */}
         <div className="create-card" style={{ marginTop: '20px' }}>
           <div className="create-card-header-row">
             <div className="create-card-section-title">
-              NODES <span className="label-badge">0 Items</span>
+              NODES{' '}
+              {isClone && <span className="label-badge-pill">P-V-P</span>}{' '}
+              <span className="nodes-item-count">{nodes.length} items</span>
             </div>
             <button
               type="button"
               className="btn-secondary-action"
-              onClick={() => alert('Add a counter first to define nodes')}
+              onClick={handleOpenAddNode}
             >
               <Plus size={14} />
               <span>Add</span>
             </button>
           </div>
 
-          <div className="empty-subcard">
-            Add a counter first to define nodes.
-          </div>
+          {nodes.length === 0 ? (
+            <div className="empty-subcard">
+              {counters.length === 0
+                ? 'Add a counter first to define nodes.'
+                : 'No nodes defined. Click + Add to define nodes.'}
+            </div>
+          ) : (
+            <div className="table-wrapper detail-subtable-wrapper">
+              <table className="detail-subtable">
+                <thead>
+                  <tr>
+                    <th>ARCHETYPE</th>
+                    <th>UNIQUE ID</th>
+                    <th>NODE ID</th>
+                    <th>TYPE</th>
+                    <th>PURPOSE</th>
+                    <th>DESCRIPTION</th>
+                    <th>INCO TERM</th>
+                    <th style={{ textAlign: 'right', width: '80px' }}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {nodes.map((node, idx) => (
+                    <tr key={node.uniqueId || idx}>
+                      <td>{node.archetype}</td>
+                      <td>{node.uniqueId}</td>
+                      <td>{node.nodeId}</td>
+                      <td>
+                        <span className={`circle-badge badge-${node.typeColor || 'purple'}`}>
+                          {node.type}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`circle-badge badge-${node.purposeColor || 'green'}`}>
+                          {node.purpose}
+                        </span>
+                      </td>
+                      <td>{node.description}</td>
+                      <td>{node.incoTerm}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div className="row-action-buttons">
+                          <button
+                            type="button"
+                            className="btn-row-edit"
+                            title="Edit Node"
+                            onClick={() => handleOpenEditNode(node, idx)}
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-row-remove"
+                            title="Remove Node"
+                            onClick={() => handleRemoveNode(idx)}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Bottom Footer Actions */}
@@ -345,6 +769,248 @@ export default function CreateArchetype({ onBack, onSave }) {
           </div>
         </div>
       </form>
+
+      {/* Edit / Add Counter Modal */}
+      {counterModal.isOpen && (
+        <div className="modal-backdrop">
+          <div className="subitem-modal">
+            <div className="modal-header">
+              <h3>{counterModal.isEdit ? 'Edit Counter' : 'Add New Counter'}</h3>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setCounterModal({ isOpen: false, isEdit: false, index: -1, data: {} })}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveCounterModal} className="modal-form-body">
+              <div className="form-group">
+                <label>Counter ID</label>
+                <input
+                  type="text"
+                  required
+                  value={counterModal.data.counterId}
+                  onChange={(e) =>
+                    setCounterModal((prev) => ({
+                      ...prev,
+                      data: { ...prev.data, counterId: e.target.value }
+                    }))
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Pattern ID</label>
+                <select
+                  value={counterModal.data.patternId}
+                  onChange={(e) =>
+                    setCounterModal((prev) => ({
+                      ...prev,
+                      data: { ...prev.data, patternId: e.target.value }
+                    }))
+                  }
+                >
+                  <option value="P-V-P">P-V-P</option>
+                  <option value="P-FP">P-FP</option>
+                  <option value="P-P">P-P</option>
+                </select>
+              </div>
+              <div className="two-col-grid">
+                <div className="form-group">
+                  <label>Origin</label>
+                  <input
+                    type="text"
+                    required
+                    value={counterModal.data.origin}
+                    onChange={(e) =>
+                      setCounterModal((prev) => ({
+                        ...prev,
+                        data: { ...prev.data, origin: e.target.value }
+                      }))
+                    }
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Destination</label>
+                  <input
+                    type="text"
+                    required
+                    value={counterModal.data.destination}
+                    onChange={(e) =>
+                      setCounterModal((prev) => ({
+                        ...prev,
+                        data: { ...prev.data, destination: e.target.value }
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Lane Master</label>
+                <input
+                  type="text"
+                  required
+                  value={counterModal.data.laneMaster}
+                  onChange={(e) =>
+                    setCounterModal((prev) => ({
+                      ...prev,
+                      data: { ...prev.data, laneMaster: e.target.value }
+                    }))
+                  }
+                />
+              </div>
+              <div className="modal-actions-footer">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setCounterModal({ isOpen: false, isEdit: false, index: -1, data: {} })}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-modal-apply">
+                  {counterModal.isEdit ? 'Save Changes' : 'Add Counter'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit / Add Node Modal */}
+      {nodeModal.isOpen && (
+        <div className="modal-backdrop">
+          <div className="subitem-modal">
+            <div className="modal-header">
+              <h3>{nodeModal.isEdit ? 'Edit Node' : 'Add New Node'}</h3>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setNodeModal({ isOpen: false, isEdit: false, index: -1, data: {} })}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveNodeModal} className="modal-form-body">
+              <div className="two-col-grid">
+                <div className="form-group">
+                  <label>Unique ID</label>
+                  <input
+                    type="text"
+                    required
+                    value={nodeModal.data.uniqueId}
+                    onChange={(e) =>
+                      setNodeModal((prev) => ({
+                        ...prev,
+                        data: { ...prev.data, uniqueId: e.target.value }
+                      }))
+                    }
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Node ID</label>
+                  <input
+                    type="text"
+                    required
+                    value={nodeModal.data.nodeId}
+                    onChange={(e) =>
+                      setNodeModal((prev) => ({
+                        ...prev,
+                        data: { ...prev.data, nodeId: e.target.value }
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="two-col-grid">
+                <div className="form-group">
+                  <label>Type (e.g. P or V)</label>
+                  <select
+                    value={nodeModal.data.type}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNodeModal((prev) => ({
+                        ...prev,
+                        data: {
+                          ...prev.data,
+                          type: val,
+                          typeColor: val === 'V' ? 'orange' : 'purple'
+                        }
+                      }));
+                    }}
+                  >
+                    <option value="P">P (Plant / Hub)</option>
+                    <option value="V">V (Vendor)</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Purpose (e.g. M or DC)</label>
+                  <select
+                    value={nodeModal.data.purpose}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNodeModal((prev) => ({
+                        ...prev,
+                        data: {
+                          ...prev.data,
+                          purpose: val,
+                          purposeColor: val === 'DC' ? 'amber' : 'green'
+                        }
+                      }));
+                    }}
+                  >
+                    <option value="M">M (Manufacturing)</option>
+                    <option value="DC">DC (Distribution Center)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Description</label>
+                <input
+                  type="text"
+                  required
+                  value={nodeModal.data.description}
+                  onChange={(e) =>
+                    setNodeModal((prev) => ({
+                      ...prev,
+                      data: { ...prev.data, description: e.target.value }
+                    }))
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Inco Term</label>
+                <select
+                  value={nodeModal.data.incoTerm}
+                  onChange={(e) =>
+                    setNodeModal((prev) => ({
+                      ...prev,
+                      data: { ...prev.data, incoTerm: e.target.value }
+                    }))
+                  }
+                >
+                  <option value="EXW">EXW</option>
+                  <option value="CIF">CIF</option>
+                  <option value="DAP">DAP</option>
+                  <option value="FOB">FOB</option>
+                  <option value="DDP">DDP</option>
+                </select>
+              </div>
+              <div className="modal-actions-footer">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setNodeModal({ isOpen: false, isEdit: false, index: -1, data: {} })}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-modal-apply">
+                  {nodeModal.isEdit ? 'Save Changes' : 'Add Node'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
