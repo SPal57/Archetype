@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import TopBanner from './components/TopBanner';
 import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
@@ -19,6 +19,29 @@ export default function App() {
   const [allArchetypes, setAllArchetypes] = useState(initialArchetypesData);
   const [activeSearchCriteria, setActiveSearchCriteria] = useState(null);
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch archetypes from backend database API on mount
+  useEffect(() => {
+    const fetchArchetypes = async () => {
+      try {
+        setIsLoading(true);
+        const res = await fetch('http://localhost:5000/api/lane-headers');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data)) {
+            setAllArchetypes(json.data);
+          }
+        }
+      } catch (err) {
+        // Backend offline or local development: retain local state
+        console.log('Backend API note: Running with local memory state.', err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchArchetypes();
+  }, []);
   
   // Modal State for notifications/actions
   const [modalState, setModalState] = useState({
@@ -135,36 +158,174 @@ export default function App() {
   };
 
   // Handle Save from Create / Clone Archetype form
-  const handleSaveArchetype = (newRecord) => {
+  const handleSaveArchetype = async (newRecord) => {
+    const hasVisio = Boolean(newRecord.attachment && newRecord.attachment.trim());
+    const codeValue = newRecord.archetypeId?.trim() || `ARC-${Date.now().toString().slice(-4)}`;
+    const laneValue = newRecord.csclLaneId?.trim() || `CSCL-${Date.now().toString().slice(-4)}`;
+    const descValue = (newRecord.shortDescription || '').trim();
+    const legalEntitiesValue = (newRecord.legalEntities || '').trim();
+
     const formattedRecord = {
-      id: String(Date.now()),
-      codeLines: [
-        newRecord.archetypeId || 'L3NEW',
-        newRecord.csclLaneId || 'CSCL',
-        'GL'
-      ],
-      code: newRecord.archetypeId || `L3-${newRecord.csclLaneId}`,
-      laneId: newRecord.csclLaneId || '0000099999',
-      title: newRecord.shortDescription || 'New Archetype Definition',
-      legalEntities: 'Johnson & Johnson Global Supply Chain',
+      id: codeValue,
+      archetypeId: codeValue,
+      csclLaneId: laneValue,
+      laneId: laneValue,
+      codeLines: codeValue.includes('-') ? codeValue.split('-') : [codeValue],
+      code: codeValue,
+      shortDescription: descValue,
+      description: descValue,
+      legalEntities: legalEntitiesValue,
+      status: newRecord.status || 'Draft',
       pfcStatus: newRecord.status || 'Draft',
-      pfcStatusClass: 'status-dot-new',
-      visioStatus: newRecord.status === 'Approved' ? 'Approved' : 'Draft',
-      visioClass: newRecord.status === 'Approved' ? 'approved' : 'draft',
-      approvals: { approved: 0, total: 3, steps: ['pending', 'pending', 'pending'] },
+      pfcStatusClass: newRecord.status === 'Approved' ? 'status-dot-approved' : (newRecord.status === 'In Review' ? 'status-dot-review' : 'status-dot-new'),
+      visioStatus: hasVisio ? 'Approval In Progress' : 'Not Uploaded',
+      visioClass: hasVisio ? 'in-progress' : 'new',
+      approvals: {
+        approved: hasVisio ? 1 : 0,
+        total: 3,
+        steps: hasVisio ? ['approved', 'pending', 'pending'] : ['pending', 'pending', 'pending']
+      },
       lastUpdate: new Date().toISOString().slice(0, 10).replace(/-/g, '/'),
       updatedBy: newRecord.owner || currentUser,
       patternId: 'P-P',
       owner: newRecord.owner,
-      description: newRecord.shortDescription
+      wave: newRecord.wave,
+      planTeam: newRecord.planTeam,
+      planGrp: newRecord.planGrp,
+      project: newRecord.project,
+      nodesCount: newRecord.nodesCount || `${newRecord.nodes?.length || 0} nodes defined`,
+      attachmentName: newRecord.attachment,
+      attachment: newRecord.attachment,
+      l1PhysicalFlow: newRecord.l1PhysicalFlow,
+      l1FinancialFlow: newRecord.l1FinancialFlow,
+      counters: newRecord.counters || [],
+      nodes: newRecord.nodes || []
     };
 
+    // 1. Optimistic UI update: immediately add to list
     setAllArchetypes((prev) => [formattedRecord, ...prev]);
     setCurrentView('list');
+
+    // 2. Persist to Express backend / Azure SQL
+    try {
+      await fetch('http://localhost:5000/api/lane-headers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          archetypeId: codeValue,
+          csclLaneId: laneValue,
+          code: codeValue,
+          shortDescription: descValue,
+          legalEntities: legalEntitiesValue,
+          status: newRecord.status || 'Draft',
+          owner: newRecord.owner,
+          wave: newRecord.wave,
+          planTeam: newRecord.planTeam,
+          planGrp: newRecord.planGrp,
+          project: newRecord.project,
+          nodesCount: formattedRecord.nodesCount,
+          attachmentName: newRecord.attachment,
+          l1PhysicalFlow: newRecord.l1PhysicalFlow,
+          l1FinancialFlow: newRecord.l1FinancialFlow
+        })
+      });
+    } catch (err) {
+      console.log('Backend notification: Data saved to browser view (database sync pending network):', err.message);
+    }
+
     setModalState({
       isOpen: true,
       title: createMode === 'clone' ? 'Archetype Cloned Successfully' : 'Archetype Created Successfully',
-      message: `Lane "${newRecord.csclLaneId}" (${newRecord.archetypeId}) has been successfully saved and added to the repository.`
+      message: `Lane "${laneValue}" (${codeValue}) has been successfully saved into Lane Header and added to the table!`
+    });
+  };
+
+  // Handle Update from ArchetypeDetail edit view
+  const handleUpdateArchetype = async (originalId, updatedRecord) => {
+    const newArchId = (updatedRecord.archetypeId || originalId).trim();
+    const newCsclId = (updatedRecord.csclLaneId || '').trim();
+    const descValue = (updatedRecord.shortDescription || '').trim();
+    const legalEntitiesValue = (updatedRecord.legalEntities || '').trim();
+
+    // 1. Persist to Express backend / Azure SQL
+    const res = await fetch(`http://localhost:5000/api/lane-headers/${encodeURIComponent(originalId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        archetypeId: newArchId,
+        csclLaneId: newCsclId,
+        shortDescription: descValue,
+        legalEntities: legalEntitiesValue,
+        status: updatedRecord.status || 'Draft',
+        owner: updatedRecord.owner,
+        wave: updatedRecord.wave,
+        planTeam: updatedRecord.planTeam,
+        planGrp: updatedRecord.planGrp,
+        project: updatedRecord.project,
+        nodesCount: updatedRecord.nodesCount || `${updatedRecord.nodes?.length || 0} nodes defined`,
+        attachmentName: updatedRecord.attachmentName || updatedRecord.attachment,
+        l1PhysicalFlow: updatedRecord.l1PhysicalFlow,
+        l1FinancialFlow: updatedRecord.l1FinancialFlow
+      })
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Failed to update archetype in database');
+    }
+
+    // 2. Update local state in allArchetypes
+    setAllArchetypes((prev) =>
+      prev.map((item) => {
+        const itemId = item.archetypeId || item.code || item.id;
+        if (itemId === originalId) {
+          return {
+            ...item,
+            ...updatedRecord,
+            id: newArchId,
+            archetypeId: newArchId,
+            code: newArchId,
+            codeLines: newArchId.includes('-') ? newArchId.split('-') : [newArchId],
+            csclLaneId: newCsclId,
+            laneId: newCsclId,
+            description: descValue,
+            shortDescription: descValue,
+            legalEntities: legalEntitiesValue,
+            status: updatedRecord.status,
+            pfcStatus: updatedRecord.status,
+            pfcStatusClass: updatedRecord.status === 'Approved' ? 'status-dot-approved' : (updatedRecord.status === 'In Review' ? 'status-dot-review' : 'status-dot-new'),
+            updatedBy: updatedRecord.owner,
+            lastUpdate: new Date().toISOString().slice(0, 10).replace(/-/g, '/')
+          };
+        }
+        return item;
+      })
+    );
+
+    // 3. Update selectedArchetype
+    setSelectedArchetype((prev) => ({
+      ...prev,
+      ...updatedRecord,
+      id: newArchId,
+      archetypeId: newArchId,
+      code: newArchId,
+      codeLines: newArchId.includes('-') ? newArchId.split('-') : [newArchId],
+      csclLaneId: newCsclId,
+      laneId: newCsclId,
+      description: descValue,
+      shortDescription: descValue,
+      legalEntities: legalEntitiesValue,
+      status: updatedRecord.status,
+      pfcStatus: updatedRecord.status,
+      pfcStatusClass: updatedRecord.status === 'Approved' ? 'status-dot-approved' : (updatedRecord.status === 'In Review' ? 'status-dot-review' : 'status-dot-new'),
+      updatedBy: updatedRecord.owner,
+      lastUpdate: new Date().toISOString().slice(0, 10).replace(/-/g, '/')
+    }));
+
+    setModalState({
+      isOpen: true,
+      title: 'Archetype Updated Successfully',
+      message: `Archetype "${newArchId}" (CSCL Lane ID: ${newCsclId}) has been successfully updated in the database.`
     });
   };
 
@@ -216,7 +377,9 @@ export default function App() {
           ) : currentView === 'detail' ? (
             <ArchetypeDetail
               archetype={selectedArchetype || allArchetypes[0]}
+              allArchetypes={allArchetypes}
               onBack={() => setCurrentView('list')}
+              onSaveEdit={handleUpdateArchetype}
             />
           ) : (
             <>

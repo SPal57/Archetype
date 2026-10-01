@@ -1614,6 +1614,100 @@ body {
   border-color: #1868FA;
 }
 
+.btn-detail-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #1868FA;
+  border: 1px solid #1868FA;
+  color: #FFFFFF;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(24, 104, 250, 0.2);
+}
+
+.btn-detail-save:hover {
+  background-color: #0E56D9;
+  border-color: #0E56D9;
+}
+
+.btn-detail-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-detail-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #64748B;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-detail-cancel:hover {
+  background-color: #F8FAFC;
+  border-color: #94A3B8;
+  color: #334155;
+}
+
+.detail-error-banner {
+  margin-top: 12px;
+  margin-bottom: 8px;
+  padding: 10px 16px;
+  background-color: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  border-radius: 6px;
+  color: #B91C1C;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-control-edit {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #3B82F6;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #1E293B;
+  background-color: #FFFFFF;
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15);
+  transition: border-color 0.15s ease;
+}
+
+.form-control-edit:focus {
+  border-color: #1D4ED8;
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.2);
+}
+
+.detail-empty-box {
+  padding: 24px;
+  text-align: center;
+  color: #64748B;
+  font-size: 13px;
+  background-color: #F8FAFC;
+  border-radius: 6px;
+  border: 1px dashed #CBD5E1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
 .detail-page-heading h1 {
   font-size: 22px;
   font-weight: 700;
@@ -1628,8 +1722,8 @@ body {
 }
 
 .read-only-input {
-  background-color: #FFFFFF;
-  border: 1px solid #CBD5E1;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
   color: #1E293B;
   font-weight: 500;
   cursor: default;

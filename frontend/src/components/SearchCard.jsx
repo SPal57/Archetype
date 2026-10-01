@@ -126,9 +126,9 @@ export default function SearchCard({ onOpenAdvancedSearch, onSearch, onReset }) 
               </div>
             </div>
 
-            {/* 5. Description */}
+            {/* 5. Short Description */}
             <div className="form-group">
-              <label htmlFor="description">Description</label>
+              <label htmlFor="description">Short Description</label>
               <input
                 type="text"
                 id="description"

@@ -3,6 +3,7 @@
 -- Database: LHM2
 -- Target Server: aykbsd01.database.windows.net
 -- Purpose: Create isolated [archetype] schema & [lane_headers] table
+-- Clean initial state (NO seed rows inserted - ready for manual UI entry)
 -- =========================================================================
 
 USE [LHM2];
@@ -30,8 +31,7 @@ BEGIN
     CREATE TABLE [archetype].[lane_headers] (
         archetype_id        VARCHAR(50)   NOT NULL PRIMARY KEY,
         cscl_lane_id        VARCHAR(50)   NOT NULL,
-        code                VARCHAR(100)  NULL,
-        title               VARCHAR(255)  NULL,
+        legal_entities      VARCHAR(500)  NULL,
         status              VARCHAR(50)   NOT NULL DEFAULT 'Draft',
         owner_email         VARCHAR(255)  NOT NULL,
         wave                VARCHAR(50)   NULL,
@@ -41,6 +41,9 @@ BEGIN
         project             VARCHAR(100)  NULL,
         nodes_count         VARCHAR(50)   NULL DEFAULT '0 nodes defined',
         attachment_name     VARCHAR(255)  NULL,
+        visio_status        VARCHAR(50)   NULL DEFAULT 'Not Uploaded',
+        approvals_approved  INT           NULL DEFAULT 0,
+        approvals_total     INT           NULL DEFAULT 3,
         l1_physical_flow    VARCHAR(255)  NULL,
         l1_financial_flow   VARCHAR(255)  NULL,
         created_at          DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
@@ -55,46 +58,5 @@ END
 ELSE
 BEGIN
     PRINT 'Table [archetype].[lane_headers] already exists.';
-END
-GO
-
--- 3. Seed Initial Record (ARC-0001) if table is empty
-IF NOT EXISTS (SELECT 1 FROM [archetype].[lane_headers] WHERE archetype_id = 'ARC-0001')
-BEGIN
-    INSERT INTO [archetype].[lane_headers] (
-        archetype_id,
-        cscl_lane_id,
-        code,
-        title,
-        status,
-        owner_email,
-        wave,
-        short_description,
-        plan_team,
-        plan_grp,
-        project,
-        nodes_count,
-        attachment_name,
-        l1_physical_flow,
-        l1_financial_flow
-    ) VALUES (
-        'ARC-0001',
-        'CSCL-1001',
-        'L3J1-USROTC-JP',
-        'USROTC DCs - JnJ Japan',
-        'Draft',
-        'bruno.oliveira@jnj.com',
-        'Wave 3',
-        'US Return to Origin - Japan DCs',
-        'APAC Planning',
-        'PG-JP-01',
-        'PRJ-2026-042',
-        '5 nodes defined',
-        'lane_spec_jp.pdf',
-        'US -> JP-DC -> Customer',
-        'USD -> JPY (T+2)'
-    );
-
-    PRINT 'Seed row for ARC-0001 inserted successfully.';
 END
 GO

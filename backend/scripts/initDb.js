@@ -42,8 +42,7 @@ async function initDatabase() {
         CREATE TABLE [${SCHEMA_NAME}].[lane_headers] (
           archetype_id        VARCHAR(50)   NOT NULL PRIMARY KEY,
           cscl_lane_id        VARCHAR(50)   NOT NULL,
-          code                VARCHAR(100)  NULL,
-          title               VARCHAR(255)  NULL,
+          legal_entities      VARCHAR(500)  NULL,
           status              VARCHAR(50)   NOT NULL DEFAULT 'Draft',
           owner_email         VARCHAR(255)  NOT NULL,
           wave                VARCHAR(50)   NULL,
@@ -53,6 +52,9 @@ async function initDatabase() {
           project             VARCHAR(100)  NULL,
           nodes_count         VARCHAR(50)   NULL DEFAULT '0 nodes defined',
           attachment_name     VARCHAR(255)  NULL,
+          visio_status        VARCHAR(50)   NULL DEFAULT 'Not Uploaded',
+          approvals_approved  INT           NULL DEFAULT 0,
+          approvals_total     INT           NULL DEFAULT 3,
           l1_physical_flow    VARCHAR(255)  NULL,
           l1_financial_flow   VARCHAR(255)  NULL,
           created_at          DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
@@ -67,76 +69,82 @@ async function initDatabase() {
       ELSE
       BEGIN
         PRINT 'Table [${SCHEMA_NAME}].[lane_headers] already exists.';
+        
+        -- Drop deprecated title column if present
+        IF EXISTS (
+          SELECT * FROM sys.columns 
+          WHERE object_id = OBJECT_ID(N'[${SCHEMA_NAME}].[lane_headers]') 
+          AND name = 'title'
+        )
+        BEGIN
+          ALTER TABLE [${SCHEMA_NAME}].[lane_headers] DROP COLUMN title;
+          PRINT 'Removed redundant [title] column (merged with short_description).';
+        END
+
+        -- Drop redundant code column if present (merged with archetype_id)
+        IF EXISTS (
+          SELECT * FROM sys.columns 
+          WHERE object_id = OBJECT_ID(N'[${SCHEMA_NAME}].[lane_headers]') 
+          AND name = 'code'
+        )
+        BEGIN
+          ALTER TABLE [${SCHEMA_NAME}].[lane_headers] DROP COLUMN code;
+          PRINT 'Removed redundant [code] column (merged with archetype_id).';
+        END
+
+        -- Safe auto-migration for legal_entities column if missing
+        IF NOT EXISTS (
+          SELECT * FROM sys.columns 
+          WHERE object_id = OBJECT_ID(N'[${SCHEMA_NAME}].[lane_headers]') 
+          AND name = 'legal_entities'
+        )
+        BEGIN
+          ALTER TABLE [${SCHEMA_NAME}].[lane_headers] ADD legal_entities VARCHAR(500) NULL;
+          PRINT 'Added missing column [legal_entities] to table.';
+        END
+
+        -- Safe auto-migration for visio_status column if missing
+        IF NOT EXISTS (
+          SELECT * FROM sys.columns 
+          WHERE object_id = OBJECT_ID(N'[${SCHEMA_NAME}].[lane_headers]') 
+          AND name = 'visio_status'
+        )
+        BEGIN
+          ALTER TABLE [${SCHEMA_NAME}].[lane_headers] ADD visio_status VARCHAR(50) NULL DEFAULT 'Not Uploaded';
+          PRINT 'Added missing column [visio_status] to table.';
+        END
+
+        -- Safe auto-migration for approvals_approved column if missing
+        IF NOT EXISTS (
+          SELECT * FROM sys.columns 
+          WHERE object_id = OBJECT_ID(N'[${SCHEMA_NAME}].[lane_headers]') 
+          AND name = 'approvals_approved'
+        )
+        BEGIN
+          ALTER TABLE [${SCHEMA_NAME}].[lane_headers] ADD approvals_approved INT NULL DEFAULT 0;
+          PRINT 'Added missing column [approvals_approved] to table.';
+        END
+
+        -- Safe auto-migration for approvals_total column if missing
+        IF NOT EXISTS (
+          SELECT * FROM sys.columns 
+          WHERE object_id = OBJECT_ID(N'[${SCHEMA_NAME}].[lane_headers]') 
+          AND name = 'approvals_total'
+        )
+        BEGIN
+          ALTER TABLE [${SCHEMA_NAME}].[lane_headers] ADD approvals_total INT NULL DEFAULT 3;
+          PRINT 'Added missing column [approvals_total] to table.';
+        END
       END
     `;
     await pool.request().query(tableCreateQuery);
     console.log(`✓ Table [${SCHEMA_NAME}].[lane_headers] is ready.\n`);
 
-    // 3. Seed initial row if table is empty
-    console.log(`Step 3: Checking for initial seed data in [${SCHEMA_NAME}].[lane_headers]...`);
-    const countResult = await pool.request().query(`SELECT COUNT(*) AS rowCount FROM [${SCHEMA_NAME}].[lane_headers]`);
-    const rowCount = countResult.recordset[0].rowCount;
-
-    if (rowCount === 0) {
-      console.log('Table is empty. Seeding initial Archetype record (ARC-0001)...');
-      const seedQuery = `
-        INSERT INTO [${SCHEMA_NAME}].[lane_headers] (
-          archetype_id,
-          cscl_lane_id,
-          code,
-          title,
-          status,
-          owner_email,
-          wave,
-          short_description,
-          plan_team,
-          plan_grp,
-          project,
-          nodes_count,
-          attachment_name,
-          l1_physical_flow,
-          l1_financial_flow
-        ) VALUES (
-          @archetype_id,
-          @cscl_lane_id,
-          @code,
-          @title,
-          @status,
-          @owner_email,
-          @wave,
-          @short_description,
-          @plan_team,
-          @plan_grp,
-          @project,
-          @nodes_count,
-          @attachment_name,
-          @l1_physical_flow,
-          @l1_financial_flow
-        )
-      `;
-
-      await pool.request()
-        .input('archetype_id', sql.VarChar(50), 'ARC-0001')
-        .input('cscl_lane_id', sql.VarChar(50), 'CSCL-1001')
-        .input('code', sql.VarChar(100), 'L3J1-USROTC-JP')
-        .input('title', sql.VarChar(255), 'USROTC DCs - JnJ Japan')
-        .input('status', sql.VarChar(50), 'Draft')
-        .input('owner_email', sql.VarChar(255), 'bruno.oliveira@jnj.com')
-        .input('wave', sql.VarChar(50), 'Wave 3')
-        .input('short_description', sql.VarChar(500), 'US Return to Origin - Japan DCs')
-        .input('plan_team', sql.VarChar(100), 'APAC Planning')
-        .input('plan_grp', sql.VarChar(100), 'PG-JP-01')
-        .input('project', sql.VarChar(100), 'PRJ-2026-042')
-        .input('nodes_count', sql.VarChar(50), '5 nodes defined')
-        .input('attachment_name', sql.VarChar(255), 'lane_spec_jp.pdf')
-        .input('l1_physical_flow', sql.VarChar(255), 'US -> JP-DC -> Customer')
-        .input('l1_financial_flow', sql.VarChar(255), 'USD -> JPY (T+2)')
-        .query(seedQuery);
-
-      console.log('✓ Initial record (ARC-0001) seeded successfully.\n');
-    } else {
-      console.log(`✓ Table already contains ${rowCount} records. No seed needed.\n`);
-    }
+    console.log(`Step 3: Verifying table status (No hardcoded data will be seeded per your instruction)...`);
+    const countResult = await pool.request().query(`SELECT COUNT(*) AS total_count FROM [${SCHEMA_NAME}].[lane_headers]`);
+    const rowCount = countResult.recordset[0].total_count;
+    console.log(`✓ Table [${SCHEMA_NAME}].[lane_headers] currently contains ${rowCount} rows.`);
+    console.log(`✓ Ready for manual input from the Web Application!\n`);
 
     console.log('====================================================');
     console.log('✓ Database initialization finished successfully!');

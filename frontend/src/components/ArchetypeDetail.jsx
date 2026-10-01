@@ -1,80 +1,71 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Download, Edit2, Trash2, FileText, ChevronDown, Plus, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  ArrowLeft,
+  Download,
+  Edit2,
+  Trash2,
+  FileText,
+  ChevronDown,
+  Plus,
+  X,
+  Check,
+  AlertCircle
+} from 'lucide-react';
 
-export default function ArchetypeDetail({ archetype, onBack }) {
-  const [selectedCounterId, setSelectedCounterId] = useState('CTR-001');
+export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack, onSaveEdit }) {
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editError, setEditError] = useState('');
 
-  // Hardcoded data matching the Figma Detail view for L3J1-USROTC-JP
-  const detailData = {
-    title: 'USROTC DCs - JnJ Japan',
-    code: 'L3J1-USROTC-JP',
-    archetypeId: 'ARC-0001',
-    csclLaneId: 'CSCL-1001',
-    status: 'Draft',
-    owner: 'bruno.oliveira@jnj.com',
-    wave: 'Wave 3',
-    shortDescription: 'US Return to Origin - Japan DCs',
-    planTeam: 'APAC Planning',
-    planGrp: 'PG-JP-01',
-    project: 'PRJ-2026-042',
-    nodesCount: '5 nodes defined',
-    attachmentName: 'lane_spec_jp.pdf',
-    l1PhysicalFlow: 'US -> JP-DC -> Customer',
-    l1FinancialFlow: 'USD -> JPY (T+2)'
-  };
+  // Editable form state initialized from archetype prop (no dummy fallbacks)
+  const [formData, setFormData] = useState({
+    archetypeId: archetype?.archetypeId || archetype?.code || archetype?.id || '',
+    csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
+    status: archetype?.status || archetype?.pfcStatus || 'Draft',
+    owner: archetype?.owner || archetype?.ownerEmail || '',
+    wave: archetype?.wave || '',
+    shortDescription: archetype?.shortDescription || archetype?.description || '',
+    legalEntities: archetype?.legalEntities || '',
+    planTeam: archetype?.planTeam || '',
+    planGrp: archetype?.planGrp || '',
+    project: archetype?.project || '',
+    attachmentName: archetype?.attachmentName || archetype?.attachment || '',
+    l1PhysicalFlow: archetype?.l1PhysicalFlow || '',
+    l1FinancialFlow: archetype?.l1FinancialFlow || ''
+  });
 
-  const [counters, setCounters] = useState([
-    {
-      counterId: 'CTR-001',
-      patternId: 'P-V-P',
-      origin: 'M',
-      destination: 'DC',
-      laneMaster: 'LM-102'
-    },
-    {
-      counterId: 'CTR-002',
-      patternId: 'P-FP',
-      origin: 'M',
-      destination: 'M',
-      laneMaster: 'LM-103'
-    }
-  ]);
+  // Only show counters and nodes that the user actually defined
+  const [counters, setCounters] = useState(archetype?.counters || []);
+  const [nodes, setNodes] = useState(archetype?.nodes || []);
+  const [selectedCounterId, setSelectedCounterId] = useState(
+    archetype?.counters?.[0]?.counterId || ''
+  );
 
-  const [nodes, setNodes] = useState([
-    {
-      archetype: 'ARC-0001',
-      uniqueId: 'NU-10021',
-      nodeId: '01',
-      type: 'P',
-      typeColor: 'purple',
-      purpose: 'M',
-      purposeColor: 'green',
-      description: 'Origin Verification',
-      incoTerm: 'EXW'
-    },
-    {
-      archetype: 'ARC-0001',
-      uniqueId: 'NU-10022',
-      nodeId: '02',
-      type: 'V',
-      typeColor: 'orange',
-      purpose: 'DC',
-      purposeColor: 'amber',
-      description: 'Vendor Handoff',
-      incoTerm: 'CIF'
-    },
-    {
-      archetype: 'ARC-0001',
-      uniqueId: 'NU-10023',
-      nodeId: '03',
-      type: 'P',
-      typeColor: 'purple',
-      purpose: 'M',
-      purposeColor: 'green',
-      description: 'Final Delivery Point',
-      incoTerm: 'DAP'
-    }
-  ]);
+  // Sync state whenever selected archetype changes
+  useEffect(() => {
+    setFormData({
+      archetypeId: archetype?.archetypeId || archetype?.code || archetype?.id || '',
+      csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
+      status: archetype?.status || archetype?.pfcStatus || 'Draft',
+      owner: archetype?.owner || archetype?.ownerEmail || '',
+      wave: archetype?.wave || '',
+      shortDescription: archetype?.shortDescription || archetype?.description || '',
+      legalEntities: archetype?.legalEntities || '',
+      planTeam: archetype?.planTeam || '',
+      planGrp: archetype?.planGrp || '',
+      project: archetype?.project || '',
+      attachmentName: archetype?.attachmentName || archetype?.attachment || '',
+      l1PhysicalFlow: archetype?.l1PhysicalFlow || '',
+      l1FinancialFlow: archetype?.l1FinancialFlow || ''
+    });
+    const currentCounters = archetype?.counters || [];
+    setCounters(currentCounters);
+    setSelectedCounterId(currentCounters[0]?.counterId || '');
+    setNodes(archetype?.nodes || []);
+    setIsEditing(false);
+    setEditError('');
+  }, [archetype]);
 
   // Modals for Counter & Node Edit/Add
   const [counterModal, setCounterModal] = useState({
@@ -113,7 +104,7 @@ export default function ArchetypeDetail({ archetype, onBack }) {
       isOpen: true,
       isEdit: false,
       index: -1,
-      data: { counterId: nextId, patternId: 'P-V-P', origin: 'M', destination: 'DC', laneMaster: 'LM-104' }
+      data: { counterId: nextId, patternId: 'P-V-P', origin: '', destination: '', laneMaster: '' }
     });
   };
 
@@ -152,15 +143,15 @@ export default function ArchetypeDetail({ archetype, onBack }) {
       isEdit: false,
       index: -1,
       data: {
-        archetype: detailData.archetypeId,
+        archetype: formData.archetypeId || 'ARC-0001',
         uniqueId: `NU-1002${nodes.length + 1}`,
         nodeId: nextNum,
         type: 'P',
         typeColor: 'purple',
         purpose: 'M',
         purposeColor: 'green',
-        description: 'New Fulfillment Node',
-        incoTerm: 'DAP'
+        description: '',
+        incoTerm: 'EXW'
       }
     });
   };
@@ -187,6 +178,108 @@ export default function ArchetypeDetail({ archetype, onBack }) {
     setNodeModal({ isOpen: false, isEdit: false, index: -1, data: {} });
   };
 
+  // Handle Cancel Edit
+  const handleCancelEdit = () => {
+    setFormData({
+      archetypeId: archetype?.archetypeId || archetype?.code || archetype?.id || '',
+      csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
+      status: archetype?.status || archetype?.pfcStatus || 'Draft',
+      owner: archetype?.owner || archetype?.ownerEmail || '',
+      wave: archetype?.wave || '',
+      shortDescription: archetype?.shortDescription || archetype?.description || '',
+      legalEntities: archetype?.legalEntities || '',
+      planTeam: archetype?.planTeam || '',
+      planGrp: archetype?.planGrp || '',
+      project: archetype?.project || '',
+      attachmentName: archetype?.attachmentName || archetype?.attachment || '',
+      l1PhysicalFlow: archetype?.l1PhysicalFlow || '',
+      l1FinancialFlow: archetype?.l1FinancialFlow || ''
+    });
+    setCounters(archetype?.counters || []);
+    setNodes(archetype?.nodes || []);
+    setEditError('');
+    setIsEditing(false);
+  };
+
+  // Handle Save Edit with Uniqueness Validation
+  const handleSaveEdit = async () => {
+    setEditError('');
+    const newArchId = formData.archetypeId?.trim();
+    const newCsclId = formData.csclLaneId?.trim();
+    const newOwner = formData.owner?.trim();
+
+    if (!newArchId) {
+      setEditError('Archetype ID is a required field.');
+      return;
+    }
+    if (!newCsclId) {
+      setEditError('CSCL Lane ID is a required field.');
+      return;
+    }
+    if (!newOwner) {
+      setEditError('Owner is a required field.');
+      return;
+    }
+
+    const originalArchId = (archetype?.archetypeId || archetype?.code || archetype?.id || '').trim();
+
+    // 1. Check uniqueness of Archetype ID against all other existing archetypes
+    const duplicateArch = allArchetypes.find((item) => {
+      const itemArchId = (item.archetypeId || item.code || item.id || '').trim();
+      return (
+        itemArchId.toUpperCase() === newArchId.toUpperCase() &&
+        itemArchId.toUpperCase() !== originalArchId.toUpperCase()
+      );
+    });
+
+    if (duplicateArch) {
+      setEditError(
+        `Archetype ID "${newArchId}" already exists in the database. Archetype ID must be unique.`
+      );
+      return;
+    }
+
+    // 2. Check uniqueness of CSCL Lane ID against all other existing archetypes
+    const duplicateCscl = allArchetypes.find((item) => {
+      const itemArchId = (item.archetypeId || item.code || item.id || '').trim();
+      const itemCsclId = (item.csclLaneId || item.laneId || '').trim();
+      return (
+        itemCsclId.toUpperCase() === newCsclId.toUpperCase() &&
+        itemArchId.toUpperCase() !== originalArchId.toUpperCase()
+      );
+    });
+
+    if (duplicateCscl) {
+      setEditError(
+        `CSCL Lane ID "${newCsclId}" already exists in the database. CSCL Lane ID must be unique.`
+      );
+      return;
+    }
+
+    // 3. Save updates
+    try {
+      setIsSaving(true);
+      if (onSaveEdit) {
+        await onSaveEdit(originalArchId, {
+          ...formData,
+          archetypeId: newArchId,
+          csclLaneId: newCsclId,
+          owner: newOwner,
+          nodesCount: `${nodes.length} nodes defined`,
+          counters,
+          nodes
+        });
+      }
+      setIsEditing(false);
+    } catch (err) {
+      setEditError(err.message || 'Failed to update archetype in database.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const displayArchId = formData.archetypeId || 'Archetype';
+
   return (
     <div className="archetype-detail-view">
       {/* Top Breadcrumb & Actions */}
@@ -197,33 +290,69 @@ export default function ArchetypeDetail({ archetype, onBack }) {
             <span>Back to Results</span>
           </button>
           <span className="breadcrumb-separator">|</span>
-          <span className="breadcrumb-current">{detailData.code}</span>
+          <span className="breadcrumb-current">{displayArchId}</span>
         </div>
 
         <div className="detail-top-actions">
-          <button
-            type="button"
-            className="btn-detail-download"
-            onClick={() => alert('Download options for ' + detailData.code)}
-          >
-            <Download size={13} />
-            <span>Download</span>
-            <ChevronDown size={13} />
-          </button>
-          <button
-            type="button"
-            className="btn-detail-edit"
-            onClick={() => alert('Editing mode enabled')}
-          >
-            <Edit2 size={13} />
-            <span>Edit</span>
-          </button>
+          {isEditing ? (
+            <>
+              <button
+                type="button"
+                className="btn-detail-cancel"
+                onClick={handleCancelEdit}
+                disabled={isSaving}
+              >
+                <X size={13} />
+                <span>Cancel</span>
+              </button>
+              <button
+                type="button"
+                className="btn-detail-save"
+                onClick={handleSaveEdit}
+                disabled={isSaving}
+              >
+                <Check size={13} />
+                <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn-detail-download"
+                onClick={() => alert('Download options for ' + displayArchId)}
+              >
+                <Download size={13} />
+                <span>Download</span>
+                <ChevronDown size={13} />
+              </button>
+              <button
+                type="button"
+                className="btn-detail-edit"
+                onClick={() => {
+                  setEditError('');
+                  setIsEditing(true);
+                }}
+              >
+                <Edit2 size={13} />
+                <span>Edit</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
+      {/* Validation / Database Error Message */}
+      {editError && (
+        <div className="detail-error-banner">
+          <AlertCircle size={16} />
+          <span>{editError}</span>
+        </div>
+      )}
+
       {/* Page Title & Subtitle */}
       <div className="detail-page-heading">
-        <h1>{detailData.title}</h1>
+        <h1>{formData.shortDescription || displayArchId}</h1>
         <p>Define a new CSCL Lane ID and its associated patterns and nodes.</p>
       </div>
 
@@ -234,20 +363,71 @@ export default function ArchetypeDetail({ archetype, onBack }) {
         {/* Row 1: 3 columns */}
         <div className="create-grid-3">
           <div className="form-group">
-            <label>Archetype ID</label>
-            <input type="text" value={detailData.archetypeId} readOnly className="read-only-input" />
+            <label>
+              Archetype ID <span className="req-asterisk">*</span>
+            </label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.archetypeId}
+                onChange={(e) => setFormData((p) => ({ ...p, archetypeId: e.target.value }))}
+                className="form-control-edit"
+                placeholder="e.g. ARC-0001"
+                required
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.archetypeId || ''}
+                readOnly
+                className="read-only-input"
+              />
+            )}
           </div>
           <div className="form-group">
             <label>
               CSCL Lane ID <span className="req-asterisk">*</span>
             </label>
-            <input type="text" value={detailData.csclLaneId} readOnly className="read-only-input" />
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.csclLaneId}
+                onChange={(e) => setFormData((p) => ({ ...p, csclLaneId: e.target.value }))}
+                className="form-control-edit"
+                placeholder="e.g. CSCL-1001"
+                required
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.csclLaneId || ''}
+                readOnly
+                className="read-only-input"
+              />
+            )}
           </div>
           <div className="form-group">
             <label>
               Status <span className="req-asterisk">*</span>
             </label>
-            <input type="text" value={detailData.status} readOnly className="read-only-input" />
+            {isEditing ? (
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
+                className="form-control-edit"
+              >
+                <option value="Draft">Draft</option>
+                <option value="In Review">In Review</option>
+                <option value="Approved">Approved</option>
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.status || ''}
+                readOnly
+                className="read-only-input"
+              />
+            )}
           </div>
         </div>
 
@@ -257,70 +437,237 @@ export default function ArchetypeDetail({ archetype, onBack }) {
             <label>
               Owner <span className="req-asterisk">*</span>
             </label>
-            <input type="text" value={detailData.owner} readOnly className="read-only-input" />
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.owner}
+                onChange={(e) => setFormData((p) => ({ ...p, owner: e.target.value }))}
+                className="form-control-edit"
+                placeholder="Owner email (e.g. user@jnj.com)"
+                required
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.owner || ''}
+                readOnly
+                className="read-only-input"
+              />
+            )}
           </div>
           <div className="form-group">
             <label>Wave</label>
-            <input type="text" value={detailData.wave} readOnly className="read-only-input" />
+            {isEditing ? (
+              <select
+                value={formData.wave}
+                onChange={(e) => setFormData((p) => ({ ...p, wave: e.target.value }))}
+                className="form-control-edit"
+              >
+                <option value="">Select Wave</option>
+                <option value="Wave 1">Wave 1</option>
+                <option value="Wave 2">Wave 2</option>
+                <option value="Wave 3">Wave 3</option>
+                <option value="Wave 4">Wave 4</option>
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.wave || ''}
+                readOnly
+                className="read-only-input"
+              />
+            )}
           </div>
           <div className="form-group">
-            <label>
-              Short Description <span className="req-asterisk">*</span>
-            </label>
-            <input type="text" value={detailData.shortDescription} readOnly className="read-only-input" />
+            <label>Short Description</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.shortDescription}
+                onChange={(e) => setFormData((p) => ({ ...p, shortDescription: e.target.value }))}
+                className="form-control-edit"
+                placeholder="Brief summary of archetype"
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.shortDescription || ''}
+                readOnly
+                className="read-only-input"
+              />
+            )}
           </div>
         </div>
 
-        {/* Row 3: Plan Team, Plan GRP, Project */}
+        {/* Row 3: Legal Entities */}
+        <div className="form-group" style={{ marginTop: '16px' }}>
+          <label>Legal Entities</label>
+          {isEditing ? (
+            <input
+              type="text"
+              value={formData.legalEntities}
+              onChange={(e) => setFormData((p) => ({ ...p, legalEntities: e.target.value }))}
+              className="form-control-edit"
+              placeholder="e.g. Johnson & Johnson Global Supply Chain"
+            />
+          ) : (
+            <input
+              type="text"
+              value={formData.legalEntities || ''}
+              readOnly
+              className="read-only-input"
+            />
+          )}
+        </div>
+
+        {/* Row 4: Plan Team, Plan GRP, Project */}
         <div className="create-grid-3" style={{ marginTop: '16px' }}>
           <div className="form-group">
             <label>Plan Team</label>
-            <input type="text" value={detailData.planTeam} readOnly className="read-only-input" />
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.planTeam}
+                onChange={(e) => setFormData((p) => ({ ...p, planTeam: e.target.value }))}
+                className="form-control-edit"
+                placeholder="Plan team"
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.planTeam || ''}
+                readOnly
+                className="read-only-input"
+              />
+            )}
           </div>
           <div className="form-group">
             <label>Plan GRP</label>
-            <input type="text" value={detailData.planGrp} readOnly className="read-only-input" />
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.planGrp}
+                onChange={(e) => setFormData((p) => ({ ...p, planGrp: e.target.value }))}
+                className="form-control-edit"
+                placeholder="Plan GRP"
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.planGrp || ''}
+                readOnly
+                className="read-only-input"
+              />
+            )}
           </div>
           <div className="form-group">
             <label>Project</label>
-            <input type="text" value={detailData.project} readOnly className="read-only-input" />
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.project}
+                onChange={(e) => setFormData((p) => ({ ...p, project: e.target.value }))}
+                className="form-control-edit"
+                placeholder="Project name or code"
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.project || ''}
+                readOnly
+                className="read-only-input"
+              />
+            )}
           </div>
         </div>
 
-        {/* Row 4: Nodes, Attachment, L1 Physical Flow */}
+        {/* Row 5: Nodes, Attachment, L1 Physical Flow */}
         <div className="create-grid-3" style={{ marginTop: '16px' }}>
           <div className="form-group">
             <label>
               Nodes <span className="label-badge">{nodes.length}</span>
             </label>
-            <input type="text" value={`${nodes.length} nodes defined`} readOnly className="read-only-input" />
+            <input
+              type="text"
+              value={`${nodes.length} nodes defined`}
+              readOnly
+              className="read-only-input"
+            />
           </div>
           <div className="form-group">
             <label>Attachment</label>
-            <div className="detail-attachment-pill">
-              <FileText size={14} className="attachment-icon" />
-              <a
-                href="#download-spec"
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert('Opening ' + detailData.attachmentName);
-                }}
-                className="attachment-link"
-              >
-                {detailData.attachmentName}
-              </a>
-            </div>
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.attachmentName}
+                onChange={(e) => setFormData((p) => ({ ...p, attachmentName: e.target.value }))}
+                className="form-control-edit"
+                placeholder="Attachment file name (e.g. Visio_Specs.vsdx)"
+              />
+            ) : formData.attachmentName ? (
+              <div className="detail-attachment-pill">
+                <FileText size={14} className="attachment-icon" />
+                <a
+                  href="#download-spec"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    alert('Opening ' + formData.attachmentName);
+                  }}
+                  className="attachment-link"
+                >
+                  {formData.attachmentName}
+                </a>
+              </div>
+            ) : (
+              <input
+                type="text"
+                value=""
+                placeholder="No file attached"
+                readOnly
+                className="read-only-input"
+              />
+            )}
           </div>
           <div className="form-group">
             <label>L1 Physical Flow</label>
-            <input type="text" value={detailData.l1PhysicalFlow} readOnly className="read-only-input" />
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.l1PhysicalFlow}
+                onChange={(e) => setFormData((p) => ({ ...p, l1PhysicalFlow: e.target.value }))}
+                className="form-control-edit"
+                placeholder="L1 Physical Flow"
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.l1PhysicalFlow || ''}
+                readOnly
+                className="read-only-input"
+              />
+            )}
           </div>
         </div>
 
-        {/* Row 5: L1 Financial Flow */}
+        {/* Row 6: L1 Financial Flow */}
         <div className="form-group" style={{ marginTop: '16px', maxWidth: '32%' }}>
           <label>L1 Financial Flow</label>
-          <input type="text" value={detailData.l1FinancialFlow} readOnly className="read-only-input" />
+          {isEditing ? (
+            <input
+              type="text"
+              value={formData.l1FinancialFlow}
+              onChange={(e) => setFormData((p) => ({ ...p, l1FinancialFlow: e.target.value }))}
+              className="form-control-edit"
+              placeholder="L1 Financial Flow"
+            />
+          ) : (
+            <input
+              type="text"
+              value={formData.l1FinancialFlow || ''}
+              readOnly
+              className="read-only-input"
+            />
+          )}
         </div>
       </div>
 
@@ -330,138 +677,182 @@ export default function ArchetypeDetail({ archetype, onBack }) {
           <div className="create-card-section-title">
             COUNTER <span className="label-badge">{counters.length}</span>
           </div>
-          <button
-            type="button"
-            className="btn-secondary-action"
-            onClick={handleOpenAddCounter}
-          >
-            <Plus size={14} />
-            <span>Add</span>
-          </button>
+          {isEditing && (
+            <button
+              type="button"
+              className="btn-secondary-action"
+              onClick={handleOpenAddCounter}
+            >
+              <Plus size={14} />
+              <span>Add</span>
+            </button>
+          )}
         </div>
 
-        <div className="table-wrapper detail-subtable-wrapper">
-          <table className="detail-subtable">
-            <thead>
-              <tr>
-                <th>COUNTER ID</th>
-                <th>PATTERN ID</th>
-                <th>ORIGIN</th>
-                <th>DESTINATION</th>
-                <th>LANE MASTER</th>
-                <th style={{ textAlign: 'right', width: '80px' }}>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {counters.map((ctr, idx) => (
-                <tr
-                  key={ctr.counterId}
-                  className={selectedCounterId === ctr.counterId ? 'detail-row-selected' : ''}
-                  onClick={() => setSelectedCounterId(ctr.counterId)}
-                >
-                  <td className="detail-cell-id">{ctr.counterId}</td>
-                  <td>
-                    <span className="detail-pattern-link">{ctr.patternId}</span>
-                  </td>
-                  <td>{ctr.origin}</td>
-                  <td>{ctr.destination}</td>
-                  <td>{ctr.laneMaster}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div className="row-action-buttons">
-                      <button
-                        type="button"
-                        className="btn-row-edit"
-                        title="Edit Counter"
-                        onClick={(e) => handleOpenEditCounter(ctr, idx, e)}
-                      >
-                        <Edit2 size={13} />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-row-remove"
-                        title="Remove Counter"
-                        onClick={(e) => handleRemoveCounter(idx, e)}
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </td>
+        {counters.length === 0 ? (
+          <div className="detail-empty-box">
+            <p>No counters defined yet for this archetype.</p>
+            {isEditing && (
+              <button
+                type="button"
+                className="btn-secondary-action"
+                onClick={handleOpenAddCounter}
+              >
+                <Plus size={14} />
+                <span>Add First Counter</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="table-wrapper detail-subtable-wrapper">
+            <table className="detail-subtable">
+              <thead>
+                <tr>
+                  <th>COUNTER ID</th>
+                  <th>PATTERN ID</th>
+                  <th>ORIGIN</th>
+                  <th>DESTINATION</th>
+                  <th>LANE MASTER</th>
+                  {isEditing && <th style={{ textAlign: 'right', width: '80px' }}>ACTIONS</th>}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {counters.map((ctr, idx) => (
+                  <tr
+                    key={ctr.counterId || idx}
+                    className={selectedCounterId === ctr.counterId ? 'detail-row-selected' : ''}
+                    onClick={() => setSelectedCounterId(ctr.counterId)}
+                  >
+                    <td className="detail-cell-id">{ctr.counterId}</td>
+                    <td>
+                      <span className="detail-pattern-link">{ctr.patternId}</span>
+                    </td>
+                    <td>{ctr.origin}</td>
+                    <td>{ctr.destination}</td>
+                    <td>{ctr.laneMaster}</td>
+                    {isEditing && (
+                      <td style={{ textAlign: 'right' }}>
+                        <div className="row-action-buttons">
+                          <button
+                            type="button"
+                            className="btn-row-edit"
+                            title="Edit Counter"
+                            onClick={(e) => handleOpenEditCounter(ctr, idx, e)}
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-row-remove"
+                            title="Remove Counter"
+                            onClick={(e) => handleRemoveCounter(idx, e)}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* 3. NODES CARD */}
       <div className="create-card">
         <div className="create-card-header-row">
           <div className="create-card-section-title">
-            NODES <span className="label-badge-pill">P-V-P</span> <span className="nodes-item-count">{nodes.length} items</span>
+            NODES <span className="nodes-item-count">{nodes.length} items</span>
           </div>
-          <button
-            type="button"
-            className="btn-secondary-action"
-            onClick={handleOpenAddNode}
-          >
-            <Plus size={14} />
-            <span>Add</span>
-          </button>
+          {isEditing && (
+            <button
+              type="button"
+              className="btn-secondary-action"
+              onClick={handleOpenAddNode}
+            >
+              <Plus size={14} />
+              <span>Add</span>
+            </button>
+          )}
         </div>
 
-        <div className="table-wrapper detail-subtable-wrapper">
-          <table className="detail-subtable">
-            <thead>
-              <tr>
-                <th>ARCHETYPE</th>
-                <th>UNIQUE ID</th>
-                <th>NODE ID</th>
-                <th>TYPE</th>
-                <th>PURPOSE</th>
-                <th>DESCRIPTION</th>
-                <th>INCO TERM</th>
-                <th style={{ textAlign: 'right', width: '80px' }}>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {nodes.map((node, idx) => (
-                <tr key={node.uniqueId || idx}>
-                  <td>{node.archetype}</td>
-                  <td>{node.uniqueId}</td>
-                  <td>{node.nodeId}</td>
-                  <td>
-                    <span className={`circle-badge badge-${node.typeColor}`}>{node.type}</span>
-                  </td>
-                  <td>
-                    <span className={`circle-badge badge-${node.purposeColor}`}>{node.purpose}</span>
-                  </td>
-                  <td>{node.description}</td>
-                  <td>{node.incoTerm}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div className="row-action-buttons">
-                      <button
-                        type="button"
-                        className="btn-row-edit"
-                        title="Edit Node"
-                        onClick={(e) => handleOpenEditNode(node, idx, e)}
-                      >
-                        <Edit2 size={13} />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-row-remove"
-                        title="Remove Node"
-                        onClick={(e) => handleRemoveNode(idx, e)}
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </td>
+        {nodes.length === 0 ? (
+          <div className="detail-empty-box">
+            <p>No nodes defined yet for this archetype.</p>
+            {isEditing && (
+              <button
+                type="button"
+                className="btn-secondary-action"
+                onClick={handleOpenAddNode}
+              >
+                <Plus size={14} />
+                <span>Add First Node</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="table-wrapper detail-subtable-wrapper">
+            <table className="detail-subtable">
+              <thead>
+                <tr>
+                  <th>ARCHETYPE</th>
+                  <th>UNIQUE ID</th>
+                  <th>NODE ID</th>
+                  <th>TYPE</th>
+                  <th>PURPOSE</th>
+                  <th>DESCRIPTION</th>
+                  <th>INCO TERM</th>
+                  {isEditing && <th style={{ textAlign: 'right', width: '80px' }}>ACTIONS</th>}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {nodes.map((node, idx) => (
+                  <tr key={node.uniqueId || idx}>
+                    <td>{node.archetype}</td>
+                    <td>{node.uniqueId}</td>
+                    <td>{node.nodeId}</td>
+                    <td>
+                      <span className={`circle-badge badge-${node.typeColor || 'purple'}`}>
+                        {node.type}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`circle-badge badge-${node.purposeColor || 'green'}`}>
+                        {node.purpose}
+                      </span>
+                    </td>
+                    <td>{node.description}</td>
+                    <td>{node.incoTerm}</td>
+                    {isEditing && (
+                      <td style={{ textAlign: 'right' }}>
+                        <div className="row-action-buttons">
+                          <button
+                            type="button"
+                            className="btn-row-edit"
+                            title="Edit Node"
+                            onClick={(e) => handleOpenEditNode(node, idx, e)}
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-row-remove"
+                            title="Remove Node"
+                            onClick={(e) => handleRemoveNode(idx, e)}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Bottom Back Button */}

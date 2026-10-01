@@ -19,6 +19,7 @@ export default function CreateArchetype({
     owner: '',
     wave: '',
     shortDescription: '',
+    legalEntities: '',
     planTeam: '',
     planGrp: '',
     project: '',
@@ -66,19 +67,20 @@ export default function CreateArchetype({
   useEffect(() => {
     if (isClone) {
       setFormData({
-        archetypeId: 'ARC-0001',
-        csclLaneId: 'CSCL-1001',
+        archetypeId: '',
+        csclLaneId: '',
         status: 'Draft',
-        owner: 'bruno.oliveira@jnj.com',
-        wave: 'Wave 3',
-        shortDescription: 'US Return to Origin - Japan DCs',
-        planTeam: 'APAC Planning',
-        planGrp: 'PG-JP-01',
-        project: 'PRJ-2026-042',
-        nodesCount: '5 nodes defined',
-        attachment: 'lane_spec_jp.pdf',
-        l1PhysicalFlow: 'US -> JP-DC -> Customer',
-        l1FinancialFlow: 'USD -> JPY (T+2)'
+        owner: referenceData?.owner || 'bruno.oliveira@jnj.com',
+        wave: referenceData?.wave || 'Wave 3',
+        shortDescription: referenceData?.shortDescription || referenceData?.description || 'US Return to Origin - Japan DCs',
+        legalEntities: referenceData?.legalEntities || '6040 - ETHICON US, LLC | 8525 - CILAG GMBH INTERNATIONAL',
+        planTeam: referenceData?.planTeam || 'APAC Planning',
+        planGrp: referenceData?.planGrp || 'PG-JP-01',
+        project: referenceData?.project || 'PRJ-2026-042',
+        nodesCount: referenceData?.nodesCount || '5 nodes defined',
+        attachment: referenceData?.attachment || referenceData?.attachmentName || 'lane_spec_jp.pdf',
+        l1PhysicalFlow: referenceData?.l1PhysicalFlow || 'US -> JP-DC -> Customer',
+        l1FinancialFlow: referenceData?.l1FinancialFlow || 'USD -> JPY (T+2)'
       });
 
       setCounters([
@@ -141,6 +143,7 @@ export default function CreateArchetype({
         owner: '',
         wave: '',
         shortDescription: '',
+        legalEntities: '',
         planTeam: '',
         planGrp: '',
         project: '',
@@ -178,7 +181,7 @@ export default function CreateArchetype({
     e.preventDefault();
     const newErrors = {};
 
-    // Basic required fields
+    // Mandatory fields: Archetype ID, CSCL Lane ID, Owner
     if (!formData.archetypeId.trim()) {
       newErrors.archetypeId = 'Archetype ID is required';
     }
@@ -187,9 +190,6 @@ export default function CreateArchetype({
     }
     if (!formData.owner.trim()) {
       newErrors.owner = 'Owner is required';
-    }
-    if (!formData.shortDescription.trim()) {
-      newErrors.shortDescription = 'Short Description is required';
     }
 
     // STRICT UNIQUENESS CHECK for Clone functionality
@@ -372,7 +372,8 @@ export default function CreateArchetype({
         <div className="create-card">
           <div className="create-card-section-title">LANE HEADER</div>
 
-          <div className="create-grid-4">
+          {/* Row 1: Archetype ID, CSCL Lane ID, Status */}
+          <div className="create-grid-3">
             {/* Archetype ID */}
             <div className={`form-group ${errors.archetypeId ? 'has-error' : ''}`}>
               <label htmlFor="archetypeId">
@@ -382,7 +383,7 @@ export default function CreateArchetype({
                 type="text"
                 id="archetypeId"
                 name="archetypeId"
-                placeholder="e.g. ARC-0002"
+                placeholder="e.g. ARC-0001"
                 value={formData.archetypeId}
                 onChange={handleChange}
               />
@@ -400,7 +401,7 @@ export default function CreateArchetype({
                 type="text"
                 id="csclLaneId"
                 name="csclLaneId"
-                placeholder="CSCL-1002"
+                placeholder="CSCL-0000"
                 value={formData.csclLaneId}
                 onChange={handleChange}
               />
@@ -426,7 +427,10 @@ export default function CreateArchetype({
                 <option value="Approved">Approved</option>
               </select>
             </div>
+          </div>
 
+          {/* Row 2: Owner, Wave, Short Description */}
+          <div className="create-grid-3" style={{ marginTop: '16px' }}>
             {/* Owner * */}
             <div className={`form-group ${errors.owner ? 'has-error' : ''}`}>
               <label htmlFor="owner">
@@ -447,9 +451,7 @@ export default function CreateArchetype({
                 <span className="error-hint">{errors.owner}</span>
               )}
             </div>
-          </div>
 
-          <div className="create-grid-3" style={{ marginTop: '16px' }}>
             {/* Wave */}
             <div className="form-group">
               <label htmlFor="wave">Wave</label>
@@ -466,11 +468,9 @@ export default function CreateArchetype({
               </select>
             </div>
 
-            {/* Short Description * */}
-            <div className={`form-group span-2 ${errors.shortDescription ? 'has-error' : ''}`}>
-              <label htmlFor="shortDescription">
-                Short Description <span className="req-asterisk">*</span>
-              </label>
+            {/* Short Description */}
+            <div className="form-group">
+              <label htmlFor="shortDescription">Short Description</label>
               <input
                 type="text"
                 id="shortDescription"
@@ -479,12 +479,23 @@ export default function CreateArchetype({
                 value={formData.shortDescription}
                 onChange={handleChange}
               />
-              {errors.shortDescription && (
-                <span className="error-hint">{errors.shortDescription}</span>
-              )}
             </div>
           </div>
 
+          {/* Row 3: Legal Entities */}
+          <div className="form-group" style={{ marginTop: '16px' }}>
+            <label htmlFor="legalEntities">Legal Entities</label>
+            <input
+              type="text"
+              id="legalEntities"
+              name="legalEntities"
+              placeholder="e.g. 6040 - ETHICON US, LLC | 8525 - CILAG GMBH INTERNATIONAL"
+              value={formData.legalEntities}
+              onChange={handleChange}
+            />
+          </div>
+
+          {/* Row 4: Plan Team, Plan GRP, Project */}
           <div className="create-grid-3" style={{ marginTop: '16px' }}>
             {/* Plan Team */}
             <div className="form-group">
@@ -526,6 +537,7 @@ export default function CreateArchetype({
             </div>
           </div>
 
+          {/* Row 5: Nodes, Attachment (Visio), L1 Physical Flow */}
           <div className="create-grid-3" style={{ marginTop: '16px' }}>
             {/* Nodes */}
             <div className="form-group">
@@ -535,39 +547,41 @@ export default function CreateArchetype({
               <input
                 type="text"
                 id="nodesCount"
-                value={isClone ? `${nodes.length} nodes defined` : (nodes.length ? `${nodes.length} nodes defined` : 'No nodes defined')}
+                value={nodes.length ? `${nodes.length} nodes defined` : 'No nodes defined'}
                 disabled
                 className="disabled-input"
               />
             </div>
 
             {/* Attachment */}
-            <div className="form-group span-2">
-              <label htmlFor="attachment">Attachment</label>
+            <div className="form-group">
+              <label htmlFor="attachment">Attachment (Visio / Spec)</label>
               <div className="attachment-input-wrapper">
                 <input
                   type="text"
                   id="attachment"
                   name="attachment"
-                  placeholder="filename.pdf"
+                  placeholder="e.g. lane_spec_jp.vsdx"
                   value={formData.attachment}
                   onChange={handleChange}
                 />
-                <button
-                  type="button"
-                  className="btn-browse-file"
-                  onClick={() => {
-                    const fakeFileName = `lane_spec_${Date.now().toString().slice(-4)}.pdf`;
-                    setFormData((prev) => ({ ...prev, attachment: fakeFileName }));
-                  }}
-                >
+                <label className="btn-browse-file" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                   Browse
-                </button>
+                  <input
+                    type="file"
+                    style={{ display: 'none' }}
+                    accept=".vsdx,.vsd,.pdf,.doc,.docx"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        const file = e.target.files[0];
+                        setFormData((prev) => ({ ...prev, attachment: file.name }));
+                      }
+                    }}
+                  />
+                </label>
               </div>
             </div>
-          </div>
 
-          <div className="create-grid-2" style={{ marginTop: '16px' }}>
             {/* L1 Physical Flow */}
             <div className="form-group">
               <label htmlFor="l1PhysicalFlow">L1 Physical Flow</label>
@@ -580,8 +594,10 @@ export default function CreateArchetype({
                 onChange={handleChange}
               />
             </div>
+          </div>
 
-            {/* L1 Financial Flow */}
+          {/* Row 6: L1 Financial Flow */}
+          <div className="create-grid-3" style={{ marginTop: '16px' }}>
             <div className="form-group">
               <label htmlFor="l1FinancialFlow">L1 Financial Flow</label>
               <input

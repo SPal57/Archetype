@@ -2,7 +2,8 @@ import express from 'express';
 import {
   getAllLaneHeaders,
   getLaneHeaderById,
-  createLaneHeader
+  createLaneHeader,
+  updateLaneHeader
 } from '../controllers/laneHeaderController.js';
 
 const router = express.Router();
@@ -15,5 +16,8 @@ router.get('/:id', getLaneHeaderById);
 
 // POST /api/lane-headers
 router.post('/', createLaneHeader);
+
+// PUT /api/lane-headers/:id
+router.put('/:id', updateLaneHeader);
 
 export default router;

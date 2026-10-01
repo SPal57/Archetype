@@ -192,7 +192,7 @@ export default function ArchetypeTable({
               </th>
               <th>Code</th>
               <th>Lane ID</th>
-              <th>Title</th>
+              <th>Short Description</th>
               <th>Legal Entities</th>
               <th>PFC Status</th>
               <th>L3 Visio Status</th>
@@ -205,20 +205,30 @@ export default function ArchetypeTable({
             {archetypes.length === 0 ? (
               <tr>
                 <td colSpan="10">
-                  <div className="empty-table-container">
-                    <div className="empty-icon-wrapper">
-                      <Database size={28} />
+                  <div className="empty-table-container" style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <div className="empty-icon-wrapper" style={{ margin: '0 auto 12px' }}>
+                      <Database size={32} />
                     </div>
-                    <div className="empty-title">No Archetypes Found</div>
-                    <div className="empty-desc">
-                      No archetypes match your current search criteria. Try resetting the filters.
+                    <div className="empty-title" style={{ fontSize: '16px', fontWeight: 600, color: '#1e293b' }}>
+                      No Archetypes Created Yet
                     </div>
+                    <div className="empty-desc" style={{ fontSize: '13px', color: '#64748b', maxWidth: '420px', margin: '6px auto 16px' }}>
+                      The database is currently clean and empty. Click <strong>+ Create</strong> above to manually define your first Lane Header!
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-create-archetype"
+                      style={{ margin: '0 auto' }}
+                      onClick={() => onCreateClick && onCreateClick('blank', null)}
+                    >
+                      <Plus size={15} />
+                      <span>Create First Archetype</span>
+                    </button>
                   </div>
                 </td>
               </tr>
             ) : (
               archetypes.map((row, index) => {
-                const isFirstRow = index === 0;
                 const isSelected = selectedRowIds.includes(row.id);
 
                 return (
@@ -237,34 +247,22 @@ export default function ArchetypeTable({
                       />
                     </td>
 
-                    {/* Code Column - First row is clickable to redirect */}
+                    {/* Code Column - Clickable to open Archetype Detail */}
                     <td className="code-cell">
-                      {isFirstRow ? (
-                        <button
-                          type="button"
-                          className="code-link-btn"
-                          onClick={() => onCodeClick && onCodeClick(row)}
-                          title="Click to view Archetype Detail"
-                        >
-                          <span className="code-primary">{row.codeLines?.[0] || row.code}</span>
-                          {row.codeLines?.[1] && (
-                            <span className="code-sub">{row.codeLines[1]}</span>
-                          )}
-                          {row.codeLines?.[2] && (
-                            <span className="code-sub">{row.codeLines[2]}</span>
-                          )}
-                        </button>
-                      ) : (
-                        <div className="code-stacked">
-                          <span className="code-primary">{row.codeLines?.[0] || row.code}</span>
-                          {row.codeLines?.[1] && (
-                            <span className="code-sub">{row.codeLines[1]}</span>
-                          )}
-                          {row.codeLines?.[2] && (
-                            <span className="code-sub">{row.codeLines[2]}</span>
-                          )}
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        className="code-link-btn"
+                        onClick={() => onCodeClick && onCodeClick(row)}
+                        title="Click to view Archetype Detail"
+                      >
+                        <span className="code-primary">{row.codeLines?.[0] || row.code || row.archetypeId}</span>
+                        {row.codeLines?.[1] && (
+                          <span className="code-sub">{row.codeLines[1]}</span>
+                        )}
+                        {row.codeLines?.[2] && (
+                          <span className="code-sub">{row.codeLines[2]}</span>
+                        )}
+                      </button>
                     </td>
 
                     {/* Lane ID */}
@@ -272,9 +270,9 @@ export default function ArchetypeTable({
                       <span className="lane-id-pill">{row.laneId}</span>
                     </td>
 
-                    {/* Title */}
+                    {/* Short Description */}
                     <td className="title-cell">
-                      <strong>{row.title}</strong>
+                      <strong>{row.shortDescription || row.description || '—'}</strong>
                     </td>
 
                     {/* Legal Entities */}
@@ -332,7 +330,7 @@ export default function ArchetypeTable({
                           <button
                             type="button"
                             className="btn-view"
-                            onClick={() => onActionClick('View Diagram', row.code)}
+                            onClick={() => (onCodeClick ? onCodeClick(row) : onActionClick('View Diagram', row.code))}
                           >
                             View
                           </button>
