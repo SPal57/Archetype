@@ -9,7 +9,7 @@ export default function CreateArchetype({
   onSave
 }) {
   const isClone = mode === 'clone';
-  const refCode = referenceData?.code || 'L3J1-USROTC-JP';
+  const refCode = referenceData?.code || referenceData?.archetypeId || referenceData?.id || 'Selected Archetype';
 
   // Form Fields State
   const [formData, setFormData] = useState({
@@ -65,76 +65,29 @@ export default function CreateArchetype({
 
   // Initialize data on mount or when mode/referenceData changes
   useEffect(() => {
-    if (isClone) {
+    if (isClone && referenceData) {
+      // In Clone mode: Pre-fill all fields with whatever user had filled in the reference archetype
+      // but keep archetypeId and csclLaneId blank so the user must provide new unique IDs
       setFormData({
         archetypeId: '',
         csclLaneId: '',
-        status: 'Draft',
-        owner: referenceData?.owner || 'bruno.oliveira@jnj.com',
-        wave: referenceData?.wave || 'Wave 3',
-        shortDescription: referenceData?.shortDescription || referenceData?.description || 'US Return to Origin - Japan DCs',
-        legalEntities: referenceData?.legalEntities || '6040 - ETHICON US, LLC | 8525 - CILAG GMBH INTERNATIONAL',
-        planTeam: referenceData?.planTeam || 'APAC Planning',
-        planGrp: referenceData?.planGrp || 'PG-JP-01',
-        project: referenceData?.project || 'PRJ-2026-042',
-        nodesCount: referenceData?.nodesCount || '5 nodes defined',
-        attachment: referenceData?.attachment || referenceData?.attachmentName || 'lane_spec_jp.pdf',
-        l1PhysicalFlow: referenceData?.l1PhysicalFlow || 'US -> JP-DC -> Customer',
-        l1FinancialFlow: referenceData?.l1FinancialFlow || 'USD -> JPY (T+2)'
+        status: referenceData.status || referenceData.pfcStatus || 'Draft',
+        owner: referenceData.owner || referenceData.ownerEmail || '',
+        wave: referenceData.wave || '',
+        shortDescription: referenceData.shortDescription || referenceData.description || '',
+        legalEntities: referenceData.legalEntities || '',
+        planTeam: referenceData.planTeam || '',
+        planGrp: referenceData.planGrp || '',
+        project: referenceData.project || '',
+        nodesCount: referenceData.nodesCount || (referenceData.nodes?.length ? `${referenceData.nodes.length} nodes defined` : ''),
+        attachment: referenceData.attachmentName || referenceData.attachment || '',
+        l1PhysicalFlow: referenceData.l1PhysicalFlow || '',
+        l1FinancialFlow: referenceData.l1FinancialFlow || ''
       });
 
-      setCounters([
-        {
-          counterId: 'CTR-001',
-          patternId: 'P-V-P',
-          origin: 'M',
-          destination: 'DC',
-          laneMaster: 'LM-102'
-        },
-        {
-          counterId: 'CTR-002',
-          patternId: 'P-FP',
-          origin: 'M',
-          destination: 'M',
-          laneMaster: 'LM-103'
-        }
-      ]);
-
-      setNodes([
-        {
-          archetype: 'ARC-0001',
-          uniqueId: 'NU-10021',
-          nodeId: '01',
-          type: 'P',
-          typeColor: 'purple',
-          purpose: 'M',
-          purposeColor: 'green',
-          description: 'Origin Verification',
-          incoTerm: 'EXW'
-        },
-        {
-          archetype: 'ARC-0001',
-          uniqueId: 'NU-10022',
-          nodeId: '02',
-          type: 'V',
-          typeColor: 'orange',
-          purpose: 'DC',
-          purposeColor: 'amber',
-          description: 'Vendor Handoff',
-          incoTerm: 'CIF'
-        },
-        {
-          archetype: 'ARC-0001',
-          uniqueId: 'NU-10023',
-          nodeId: '03',
-          type: 'P',
-          typeColor: 'purple',
-          purpose: 'M',
-          purposeColor: 'green',
-          description: 'Final Delivery Point',
-          incoTerm: 'DAP'
-        }
-      ]);
+      // Copy actual counters and nodes (empty array if reference has none)
+      setCounters(Array.isArray(referenceData.counters) ? [...referenceData.counters] : []);
+      setNodes(Array.isArray(referenceData.nodes) ? [...referenceData.nodes] : []);
     } else {
       setFormData({
         archetypeId: '',
@@ -155,6 +108,7 @@ export default function CreateArchetype({
       setCounters([]);
       setNodes([]);
     }
+    setErrors({});
   }, [isClone, referenceData]);
 
   const handleChange = (e) => {
@@ -167,11 +121,20 @@ export default function CreateArchetype({
 
   // Helper to suggest unique IDs when cloning
   const handleAutoSuggestUniqueIds = () => {
-    const nextNum = Math.floor(Math.random() * 8000) + 1002;
+    let randomNum = Math.floor(Math.random() * 9000) + 1000;
+    while (
+      existingArchetypes.some(
+        (a) =>
+          (a.code || a.archetypeId || a.id)?.toUpperCase() === `ARC-${randomNum}` ||
+          (a.laneId || a.csclLaneId)?.toUpperCase() === `CSCL-${randomNum}`
+      )
+    ) {
+      randomNum = Math.floor(Math.random() * 9000) + 1000;
+    }
     setFormData((prev) => ({
       ...prev,
-      archetypeId: `ARC-${nextNum}`,
-      csclLaneId: `CSCL-${nextNum}`
+      archetypeId: `ARC-${randomNum}`,
+      csclLaneId: `CSCL-${randomNum}`
     }));
     setErrors((prev) => ({ ...prev, archetypeId: null, csclLaneId: null }));
   };
@@ -192,31 +155,22 @@ export default function CreateArchetype({
       newErrors.owner = 'Owner is required';
     }
 
-    // STRICT UNIQUENESS CHECK for Clone functionality
-    if (isClone) {
-      // 1. Archetype ID cannot be the same as reference archetype (ARC-0001)
-      if (formData.archetypeId.trim().toUpperCase() === 'ARC-0001') {
-        newErrors.archetypeId = 'Archetype ID must be unique (cannot reuse existing ARC-0001)';
-      }
-      // 2. CSCL Lane ID cannot be the same as reference lane (CSCL-1001)
-      if (formData.csclLaneId.trim().toUpperCase() === 'CSCL-1001') {
-        newErrors.csclLaneId = 'CSCL Lane ID must be unique (cannot reuse existing CSCL-1001)';
-      }
-    }
+    const targetArchId = formData.archetypeId.trim().toUpperCase();
+    const targetCsclId = formData.csclLaneId.trim().toUpperCase();
 
-    // Check against any existing archetypes in repository
+    // Check against any existing archetypes in database
     const duplicateArchetype = existingArchetypes.find(
-      (a) => a.code?.toUpperCase() === formData.archetypeId.trim().toUpperCase()
+      (a) => (a.code || a.archetypeId || a.id)?.trim().toUpperCase() === targetArchId
     );
     if (duplicateArchetype) {
-      newErrors.archetypeId = `Archetype ID "${formData.archetypeId}" already exists`;
+      newErrors.archetypeId = `Archetype ID "${formData.archetypeId.trim()}" already exists. Please enter a unique ID.`;
     }
 
     const duplicateLane = existingArchetypes.find(
-      (a) => a.laneId === formData.csclLaneId.trim()
+      (a) => (a.laneId || a.csclLaneId)?.trim().toUpperCase() === targetCsclId
     );
     if (duplicateLane) {
-      newErrors.csclLaneId = `CSCL Lane ID "${formData.csclLaneId}" already exists`;
+      newErrors.csclLaneId = `CSCL Lane ID "${formData.csclLaneId.trim()}" already exists. Please enter a unique ID.`;
     }
 
     if (Object.keys(newErrors).length > 0) {
