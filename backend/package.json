@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "db:init": "node scripts/initDb.js"
+    "db:init": "node scripts/initDb.js",
+    "db:sync": "node scripts/initDb.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

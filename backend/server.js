@@ -5,6 +5,8 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import laneHeaderRoutes from './routes/laneHeaderRoutes.js';
+import schemaRoutes from './routes/schemaRoutes.js';
+import { schemaManager } from './services/schemaManager.js';
 import { getDbPool } from './config/db.js';
 
 dotenv.config();
@@ -48,6 +50,7 @@ app.get('/api/health', async (req, res) => {
 
 // API Routes
 app.use('/api/lane-headers', laneHeaderRoutes);
+app.use('/api/schema', schemaRoutes);
 
 // Static Frontend Serving (For Unified Azure App Service Deployment)
 const frontendDistPath = path.join(__dirname, '../frontend/dist');
@@ -68,6 +71,8 @@ if (fs.existsSync(frontendDistPath)) {
       error: 'Endpoint not found',
       availableEndpoints: [
         'GET /api/health',
+        'GET /api/schema/status',
+        'POST /api/schema/sync',
         'GET /api/lane-headers',
         'GET /api/lane-headers/:id',
         'POST /api/lane-headers'
@@ -76,10 +81,19 @@ if (fs.existsSync(frontendDistPath)) {
   });
 }
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`====================================================`);
   console.log(`🚀 J&J Archetype Service running on port ${PORT}`);
   console.log(`   Health check: http://localhost:${PORT}/api/health`);
+  console.log(`   Schema status: http://localhost:${PORT}/api/schema/status`);
   console.log(`   Lane headers: http://localhost:${PORT}/api/lane-headers`);
   console.log(`====================================================`);
+
+  // Code-First Schema Auto-Sync on server startup
+  try {
+    await schemaManager.syncSchema();
+    console.log('[Server] Database schema auto-synchronized with code definitions.');
+  } catch (err) {
+    console.log('[Server] Note: Schema auto-sync pending network connection:', err.message);
+  }
 });

@@ -1,4 +1,5 @@
 import { getDbPool, sql } from '../config/db.js';
+import { insertRecord, updateRecord } from '../services/dbHelper.js';
 
 const SCHEMA = process.env.DB_SCHEMA || 'archetype';
 
@@ -25,6 +26,9 @@ export const getAllLaneHeaders = async (req, res) => {
         approvals_total,
         l1_physical_flow,
         l1_financial_flow,
+        franchise,
+        owner_role,
+        comments,
         created_at,
         updated_at
       FROM [${SCHEMA}].[lane_headers]
@@ -57,8 +61,8 @@ export const getAllLaneHeaders = async (req, res) => {
         nodesCount: row.nodes_count,
         attachmentName: row.attachment_name,
         attachment: row.attachment_name,
-        visioStatus: row.visio_status || (row.attachment_name ? 'Approval In Progress' : 'New'),
-        visioClass: (row.visio_status || (row.attachment_name ? 'Approval In Progress' : 'New')).toLowerCase().replace(/\s+/g, '-'),
+        visioStatus: row.visio_status || (row.attachment_name ? 'Approval In Progress' : 'Not Uploaded'),
+        visioClass: (row.visio_status || (row.attachment_name ? 'Approval In Progress' : 'Not Uploaded')).toLowerCase().replace(/\s+/g, '-'),
         approvals: {
           approved: row.approvals_approved ?? (row.attachment_name ? 1 : 0),
           total: row.approvals_total ?? 3,
@@ -66,6 +70,9 @@ export const getAllLaneHeaders = async (req, res) => {
         },
         l1PhysicalFlow: row.l1_physical_flow,
         l1FinancialFlow: row.l1_financial_flow,
+        franchise: row.franchise || '',
+        ownerRole: row.owner_role || '',
+        comments: row.comments || '',
         lastUpdate: new Date(row.updated_at || row.created_at).toISOString().slice(0, 10).replace(/-/g, '/')
       };
     });
@@ -129,13 +136,16 @@ export const getLaneHeaderById = async (req, res) => {
         project: row.project,
         nodesCount: row.nodes_count,
         attachmentName: row.attachment_name,
-        visioStatus: row.visio_status || (row.attachment_name ? 'Approval In Progress' : 'New'),
+        visioStatus: row.visio_status || (row.attachment_name ? 'Approval In Progress' : 'Not Uploaded'),
         approvals: {
           approved: row.approvals_approved ?? (row.attachment_name ? 1 : 0),
           total: row.approvals_total ?? 3
         },
         l1PhysicalFlow: row.l1_physical_flow,
         l1FinancialFlow: row.l1_financial_flow,
+        franchise: row.franchise || '',
+        ownerRole: row.owner_role || '',
+        comments: row.comments || '',
         lastUpdate: new Date(row.updated_at || row.created_at).toISOString().slice(0, 10).replace(/-/g, '/')
       }
     });
@@ -165,7 +175,10 @@ export const createLaneHeader = async (req, res) => {
     nodesCount = '0 nodes defined',
     attachmentName,
     l1PhysicalFlow,
-    l1FinancialFlow
+    l1FinancialFlow,
+    franchise,
+    ownerRole,
+    comments
   } = req.body;
 
   // Mandatory fields: archetypeId, csclLaneId, owner
@@ -183,65 +196,28 @@ export const createLaneHeader = async (req, res) => {
   const approvalsTotal = 3;
 
   try {
-    const pool = await getDbPool();
-    const insertQuery = `
-      INSERT INTO [${SCHEMA}].[lane_headers] (
-        archetype_id,
-        cscl_lane_id,
-        legal_entities,
-        status,
-        owner_email,
-        wave,
-        short_description,
-        plan_team,
-        plan_grp,
-        project,
-        nodes_count,
-        attachment_name,
-        visio_status,
-        approvals_approved,
-        approvals_total,
-        l1_physical_flow,
-        l1_financial_flow
-      ) VALUES (
-        @archetype_id,
-        @cscl_lane_id,
-        @legal_entities,
-        @status,
-        @owner_email,
-        @wave,
-        @short_description,
-        @plan_team,
-        @plan_grp,
-        @project,
-        @nodes_count,
-        @attachment_name,
-        @visio_status,
-        @approvals_approved,
-        @approvals_total,
-        @l1_physical_flow,
-        @l1_financial_flow
-      )
-    `;
-    await pool.request()
-      .input('archetype_id', sql.VarChar(50), archetypeId.trim())
-      .input('cscl_lane_id', sql.VarChar(50), csclLaneId.trim())
-      .input('legal_entities', sql.VarChar(500), legalEntities ? legalEntities.trim() : null)
-      .input('status', sql.VarChar(50), status)
-      .input('owner_email', sql.VarChar(255), owner.trim())
-      .input('wave', sql.VarChar(50), wave || null)
-      .input('short_description', sql.VarChar(500), shortDescription ? shortDescription.trim() : null)
-      .input('plan_team', sql.VarChar(100), planTeam || null)
-      .input('plan_grp', sql.VarChar(100), planGrp || null)
-      .input('project', sql.VarChar(100), project || null)
-      .input('nodes_count', sql.VarChar(50), nodesCount)
-      .input('attachment_name', sql.VarChar(255), attachmentName || null)
-      .input('visio_status', sql.VarChar(50), visioStatus)
-      .input('approvals_approved', sql.Int, approvalsApproved)
-      .input('approvals_total', sql.Int, approvalsTotal)
-      .input('l1_physical_flow', sql.VarChar(255), l1PhysicalFlow || null)
-      .input('l1_financial_flow', sql.VarChar(255), l1FinancialFlow || null)
-      .query(insertQuery);
+    await insertRecord('lane_headers', {
+      archetype_id: archetypeId.trim(),
+      cscl_lane_id: csclLaneId.trim(),
+      legal_entities: legalEntities ? legalEntities.trim() : null,
+      status: status || 'Draft',
+      owner_email: owner.trim(),
+      wave: wave || null,
+      short_description: shortDescription ? shortDescription.trim() : null,
+      plan_team: planTeam || null,
+      plan_grp: planGrp || null,
+      project: project || null,
+      nodes_count: nodesCount || '0 nodes defined',
+      attachment_name: attachmentName || null,
+      visio_status: visioStatus,
+      approvals_approved: approvalsApproved,
+      approvals_total: approvalsTotal,
+      l1_physical_flow: l1PhysicalFlow || null,
+      l1_financial_flow: l1FinancialFlow || null,
+      franchise: franchise ? franchise.trim() : null,
+      owner_role: ownerRole ? ownerRole.trim() : null,
+      comments: comments ? comments.trim() : null
+    });
 
     res.status(201).json({
       success: true,
@@ -254,7 +230,10 @@ export const createLaneHeader = async (req, res) => {
         legalEntities: legalEntities ? legalEntities.trim() : '',
         status,
         visioStatus,
-        owner: owner.trim()
+        owner: owner.trim(),
+        franchise: franchise ? franchise.trim() : '',
+        ownerRole: ownerRole ? ownerRole.trim() : '',
+        comments: comments ? comments.trim() : ''
       }
     });
   } catch (error) {
@@ -284,7 +263,10 @@ export const updateLaneHeader = async (req, res) => {
     nodesCount,
     attachmentName,
     l1PhysicalFlow,
-    l1FinancialFlow
+    l1FinancialFlow,
+    franchise,
+    ownerRole,
+    comments
   } = req.body;
 
   const targetArchId = (archetypeId || id).trim();
@@ -308,10 +290,10 @@ export const updateLaneHeader = async (req, res) => {
       .input('target_cscl_id', sql.VarChar(50), targetCsclId)
       .query(`
         SELECT archetype_id, cscl_lane_id 
-        FROM[${ SCHEMA }].[lane_headers]
-        WHERE(archetype_id = @target_arch_id OR cscl_lane_id = @target_cscl_id)
+        FROM [${SCHEMA}].[lane_headers]
+        WHERE (archetype_id = @target_arch_id OR cscl_lane_id = @target_cscl_id)
         AND archetype_id != @original_id
-        `);
+      `);
 
     if (duplicateCheck.recordset.length > 0) {
       const match = duplicateCheck.recordset[0];
@@ -327,43 +309,29 @@ export const updateLaneHeader = async (req, res) => {
     const hasVisio = attachmentName && attachmentName.trim().length > 0;
     const visioStatus = hasVisio ? 'Approval In Progress' : 'Not Uploaded';
 
-    await pool.request()
-      .input('original_id', sql.VarChar(50), id)
-      .input('archetype_id', sql.VarChar(50), targetArchId)
-      .input('cscl_lane_id', sql.VarChar(50), targetCsclId)
-      .input('legal_entities', sql.VarChar(500), legalEntities ? legalEntities.trim() : null)
-      .input('status', sql.VarChar(50), status || 'Draft')
-      .input('owner_email', sql.VarChar(255), owner.trim())
-      .input('wave', sql.VarChar(50), wave || null)
-      .input('short_description', sql.VarChar(500), shortDescription ? shortDescription.trim() : null)
-      .input('plan_team', sql.VarChar(100), planTeam || null)
-      .input('plan_grp', sql.VarChar(100), planGrp || null)
-      .input('project', sql.VarChar(100), project || null)
-      .input('nodes_count', sql.VarChar(50), nodesCount || '0 nodes defined')
-      .input('attachment_name', sql.VarChar(255), attachmentName || null)
-      .input('visio_status', sql.VarChar(50), visioStatus)
-      .input('l1_physical_flow', sql.VarChar(255), l1PhysicalFlow || null)
-      .input('l1_financial_flow', sql.VarChar(255), l1FinancialFlow || null)
-      .query(`
-        UPDATE[${ SCHEMA }].[lane_headers] SET
-          archetype_id = @archetype_id,
-        cscl_lane_id = @cscl_lane_id,
-        legal_entities = @legal_entities,
-        status = @status,
-        owner_email = @owner_email,
-        wave = @wave,
-        short_description = @short_description,
-        plan_team = @plan_team,
-        plan_grp = @plan_grp,
-        project = @project,
-        nodes_count = @nodes_count,
-        attachment_name = @attachment_name,
-        visio_status = @visio_status,
-        l1_physical_flow = @l1_physical_flow,
-        l1_financial_flow = @l1_financial_flow,
-        updated_at = GETUTCDATE()
-        WHERE archetype_id = @original_id
-        `);
+    await updateRecord('lane_headers', {
+      archetype_id: targetArchId,
+      cscl_lane_id: targetCsclId,
+      legal_entities: legalEntities ? legalEntities.trim() : null,
+      status: status || 'Draft',
+      owner_email: owner.trim(),
+      wave: wave || null,
+      short_description: shortDescription ? shortDescription.trim() : null,
+      plan_team: planTeam || null,
+      plan_grp: planGrp || null,
+      project: project || null,
+      nodes_count: nodesCount || '0 nodes defined',
+      attachment_name: attachmentName || null,
+      visio_status: visioStatus,
+      l1_physical_flow: l1PhysicalFlow || null,
+      l1_financial_flow: l1FinancialFlow || null,
+      franchise: franchise ? franchise.trim() : null,
+      owner_role: ownerRole ? ownerRole.trim() : null,
+      comments: comments ? comments.trim() : null,
+      updated_at: new Date()
+    }, {
+      archetype_id: id
+    });
 
     res.json({
       success: true,
@@ -376,7 +344,10 @@ export const updateLaneHeader = async (req, res) => {
         legalEntities: legalEntities ? legalEntities.trim() : '',
         status,
         visioStatus,
-        owner: owner.trim()
+        owner: owner.trim(),
+        franchise: franchise ? franchise.trim() : '',
+        ownerRole: ownerRole ? ownerRole.trim() : '',
+        comments: comments ? comments.trim() : ''
       }
     });
   } catch (error) {

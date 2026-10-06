@@ -288,9 +288,19 @@ export default function ArchetypeTable({
 
                     {/* L3 Visio Status */}
                     <td>
-                      <span className={`visio-pill ${row.visioClass || 'in-progress'}`}>
-                        {row.visioStatus}
-                      </span>
+                      {(() => {
+                        const raw = `${row.visioClass || ''} ${row.visioStatus || ''}`.toLowerCase();
+                        let badgeClass = 'not-uploaded';
+                        if (raw.includes('approved')) badgeClass = 'approved';
+                        else if (raw.includes('progress')) badgeClass = 'in-progress';
+                        else if (raw.includes('not') || raw.includes('new') || raw.includes('upload')) badgeClass = 'not-uploaded';
+
+                        return (
+                          <span className={`visio-pill ${badgeClass}`}>
+                            {row.visioStatus || 'Not Uploaded'}
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     {/* Approvals */}

@@ -478,7 +478,8 @@ body {
   text-align: center;
 }
 
-.visio-pill.in-progress {
+.visio-pill.in-progress,
+.visio-pill.approval-in-progress {
   background-color: var(--status-in-progress-bg);
   color: var(--status-in-progress-text);
 }
@@ -488,7 +489,8 @@ body {
   color: var(--status-approved-text);
 }
 
-.visio-pill.new {
+.visio-pill.new,
+.visio-pill.not-uploaded {
   background-color: var(--status-new-bg);
   color: var(--status-new-text);
 }
@@ -821,7 +823,8 @@ body {
 }
 
 .form-group input,
-.form-group select {
+.form-group select,
+.form-group textarea {
   border: 1px solid #CBD5E1;
   border-radius: 6px;
   padding: 8px 12px;
@@ -834,12 +837,14 @@ body {
   font-family: inherit;
 }
 
-.form-group input::placeholder {
+.form-group input::placeholder,
+.form-group textarea::placeholder {
   color: #94A3B8;
 }
 
 .form-group input:focus,
-.form-group select:focus {
+.form-group select:focus,
+.form-group textarea:focus {
   border-color: #1868FA;
   box-shadow: 0 0 0 2px rgba(24, 104, 250, 0.12);
 }

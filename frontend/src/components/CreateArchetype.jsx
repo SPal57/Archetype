@@ -1,6 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Search, Plus, Trash2, Edit2, Download, ChevronDown, Check, X } from 'lucide-react';
 
+// Pre-configured dropdown values for Franchise and Owner Role (can be updated when final LOV list is provided)
+const FRANCHISE_OPTIONS = [
+  'MedTech',
+  'Ethicon',
+  'DePuy Synthes',
+  'Biosense Webster',
+  'Vision',
+  'CSS',
+  'Innovative Medicine'
+];
+
+const OWNER_ROLE_OPTIONS = [
+  'Owner',
+  'Lead',
+  'Planner',
+  'Approver',
+  'Supply Chain Lead',
+  'Architect',
+  'Administrator'
+];
+
 export default function CreateArchetype({
   mode = 'blank', // 'blank' | 'clone'
   referenceData = null,
@@ -17,6 +38,8 @@ export default function CreateArchetype({
     csclLaneId: '',
     status: 'Draft',
     owner: '',
+    ownerRole: '',
+    franchise: '',
     wave: '',
     shortDescription: '',
     legalEntities: '',
@@ -26,7 +49,8 @@ export default function CreateArchetype({
     nodesCount: '',
     attachment: '',
     l1PhysicalFlow: '',
-    l1FinancialFlow: ''
+    l1FinancialFlow: '',
+    comments: ''
   });
 
   // Counters State
@@ -73,6 +97,8 @@ export default function CreateArchetype({
         csclLaneId: '',
         status: referenceData.status || referenceData.pfcStatus || 'Draft',
         owner: referenceData.owner || referenceData.ownerEmail || '',
+        ownerRole: referenceData.ownerRole || '',
+        franchise: referenceData.franchise || '',
         wave: referenceData.wave || '',
         shortDescription: referenceData.shortDescription || referenceData.description || '',
         legalEntities: referenceData.legalEntities || '',
@@ -82,7 +108,8 @@ export default function CreateArchetype({
         nodesCount: referenceData.nodesCount || (referenceData.nodes?.length ? `${referenceData.nodes.length} nodes defined` : ''),
         attachment: referenceData.attachmentName || referenceData.attachment || '',
         l1PhysicalFlow: referenceData.l1PhysicalFlow || '',
-        l1FinancialFlow: referenceData.l1FinancialFlow || ''
+        l1FinancialFlow: referenceData.l1FinancialFlow || '',
+        comments: referenceData.comments || ''
       });
 
       // Copy actual counters and nodes (empty array if reference has none)
@@ -94,6 +121,8 @@ export default function CreateArchetype({
         csclLaneId: '',
         status: 'Draft',
         owner: '',
+        ownerRole: '',
+        franchise: '',
         wave: '',
         shortDescription: '',
         legalEntities: '',
@@ -103,7 +132,8 @@ export default function CreateArchetype({
         nodesCount: '',
         attachment: '',
         l1PhysicalFlow: '',
-        l1FinancialFlow: ''
+        l1FinancialFlow: '',
+        comments: ''
       });
       setCounters([]);
       setNodes([]);
@@ -383,7 +413,7 @@ export default function CreateArchetype({
             </div>
           </div>
 
-          {/* Row 2: Owner, Wave, Short Description */}
+          {/* Row 2: Owner, Owner Role (Dropdown), Wave */}
           <div className="create-grid-3" style={{ marginTop: '16px' }}>
             {/* Owner * */}
             <div className={`form-group ${errors.owner ? 'has-error' : ''}`}>
@@ -406,6 +436,25 @@ export default function CreateArchetype({
               )}
             </div>
 
+            {/* Owner Role (Dropdown) */}
+            <div className="form-group">
+              <label htmlFor="ownerRole">Owner Role</label>
+              <select
+                id="ownerRole"
+                name="ownerRole"
+                value={formData.ownerRole}
+                onChange={handleChange}
+              >
+                <option value="">Select Owner Role</option>
+                {OWNER_ROLE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.ownerRole && !OWNER_ROLE_OPTIONS.includes(formData.ownerRole) && (
+                  <option value={formData.ownerRole}>{formData.ownerRole}</option>
+                )}
+              </select>
+            </div>
+
             {/* Wave */}
             <div className="form-group">
               <label htmlFor="wave">Wave</label>
@@ -421,9 +470,31 @@ export default function CreateArchetype({
                 <option value="Wave 3">Wave 3</option>
               </select>
             </div>
+          </div>
+
+          {/* Row 3: Franchise (Dropdown), Short Description */}
+          <div className="create-grid-3" style={{ marginTop: '16px' }}>
+            {/* Franchise (Dropdown) */}
+            <div className="form-group">
+              <label htmlFor="franchise">Franchise</label>
+              <select
+                id="franchise"
+                name="franchise"
+                value={formData.franchise}
+                onChange={handleChange}
+              >
+                <option value="">Select Franchise</option>
+                {FRANCHISE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.franchise && !FRANCHISE_OPTIONS.includes(formData.franchise) && (
+                  <option value={formData.franchise}>{formData.franchise}</option>
+                )}
+              </select>
+            </div>
 
             {/* Short Description */}
-            <div className="form-group">
+            <div className="form-group span-2">
               <label htmlFor="shortDescription">Short Description</label>
               <input
                 type="text"
@@ -436,7 +507,7 @@ export default function CreateArchetype({
             </div>
           </div>
 
-          {/* Row 3: Legal Entities */}
+          {/* Row 4: Legal Entities */}
           <div className="form-group" style={{ marginTop: '16px' }}>
             <label htmlFor="legalEntities">Legal Entities</label>
             <input
@@ -449,7 +520,7 @@ export default function CreateArchetype({
             />
           </div>
 
-          {/* Row 4: Plan Team, Plan GRP, Project */}
+          {/* Row 5: Plan Team, Plan GRP, Project */}
           <div className="create-grid-3" style={{ marginTop: '16px' }}>
             {/* Plan Team */}
             <div className="form-group">
@@ -491,7 +562,7 @@ export default function CreateArchetype({
             </div>
           </div>
 
-          {/* Row 5: Nodes, Attachment (Visio), L1 Physical Flow */}
+          {/* Row 6: Nodes, Attachment (Visio), L1 Physical Flow */}
           <div className="create-grid-3" style={{ marginTop: '16px' }}>
             {/* Nodes */}
             <div className="form-group">
@@ -550,7 +621,7 @@ export default function CreateArchetype({
             </div>
           </div>
 
-          {/* Row 6: L1 Financial Flow */}
+          {/* Row 7: L1 Financial Flow */}
           <div className="create-grid-3" style={{ marginTop: '16px' }}>
             <div className="form-group">
               <label htmlFor="l1FinancialFlow">L1 Financial Flow</label>
@@ -563,6 +634,19 @@ export default function CreateArchetype({
                 onChange={handleChange}
               />
             </div>
+          </div>
+
+          {/* Row 8: Comments */}
+          <div className="form-group" style={{ marginTop: '16px' }}>
+            <label htmlFor="comments">Comments</label>
+            <textarea
+              id="comments"
+              name="comments"
+              rows={3}
+              placeholder="Add comments or notes..."
+              value={formData.comments}
+              onChange={handleChange}
+            />
           </div>
         </div>
 

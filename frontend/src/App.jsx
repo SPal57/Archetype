@@ -179,7 +179,7 @@ export default function App() {
       pfcStatus: newRecord.status || 'Draft',
       pfcStatusClass: newRecord.status === 'Approved' ? 'status-dot-approved' : (newRecord.status === 'In Review' ? 'status-dot-review' : 'status-dot-new'),
       visioStatus: hasVisio ? 'Approval In Progress' : 'Not Uploaded',
-      visioClass: hasVisio ? 'in-progress' : 'new',
+      visioClass: hasVisio ? 'in-progress' : 'not-uploaded',
       approvals: {
         approved: hasVisio ? 1 : 0,
         total: 3,
@@ -189,6 +189,9 @@ export default function App() {
       updatedBy: newRecord.owner || currentUser,
       patternId: 'P-P',
       owner: newRecord.owner,
+      ownerRole: newRecord.ownerRole || '',
+      franchise: newRecord.franchise || '',
+      comments: newRecord.comments || '',
       wave: newRecord.wave,
       planTeam: newRecord.planTeam,
       planGrp: newRecord.planGrp,
@@ -219,6 +222,9 @@ export default function App() {
           legalEntities: legalEntitiesValue,
           status: newRecord.status || 'Draft',
           owner: newRecord.owner,
+          ownerRole: newRecord.ownerRole || '',
+          franchise: newRecord.franchise || '',
+          comments: newRecord.comments || '',
           wave: newRecord.wave,
           planTeam: newRecord.planTeam,
           planGrp: newRecord.planGrp,
@@ -258,6 +264,9 @@ export default function App() {
         legalEntities: legalEntitiesValue,
         status: updatedRecord.status || 'Draft',
         owner: updatedRecord.owner,
+        ownerRole: updatedRecord.ownerRole || '',
+        franchise: updatedRecord.franchise || '',
+        comments: updatedRecord.comments || '',
         wave: updatedRecord.wave,
         planTeam: updatedRecord.planTeam,
         planGrp: updatedRecord.planGrp,
@@ -273,6 +282,10 @@ export default function App() {
     if (!res.ok || !json.success) {
       throw new Error(json.message || 'Failed to update archetype in database');
     }
+
+    const hasVisio = Boolean((updatedRecord.attachmentName || updatedRecord.attachment || '').trim());
+    const visioStatus = hasVisio ? 'Approval In Progress' : 'Not Uploaded';
+    const visioClass = hasVisio ? 'in-progress' : 'not-uploaded';
 
     // 2. Update local state in allArchetypes
     setAllArchetypes((prev) =>
@@ -294,7 +307,12 @@ export default function App() {
             status: updatedRecord.status,
             pfcStatus: updatedRecord.status,
             pfcStatusClass: updatedRecord.status === 'Approved' ? 'status-dot-approved' : (updatedRecord.status === 'In Review' ? 'status-dot-review' : 'status-dot-new'),
+            visioStatus,
+            visioClass,
             updatedBy: updatedRecord.owner,
+            ownerRole: updatedRecord.ownerRole || '',
+            franchise: updatedRecord.franchise || '',
+            comments: updatedRecord.comments || '',
             lastUpdate: new Date().toISOString().slice(0, 10).replace(/-/g, '/')
           };
         }
@@ -318,7 +336,12 @@ export default function App() {
       status: updatedRecord.status,
       pfcStatus: updatedRecord.status,
       pfcStatusClass: updatedRecord.status === 'Approved' ? 'status-dot-approved' : (updatedRecord.status === 'In Review' ? 'status-dot-review' : 'status-dot-new'),
+      visioStatus,
+      visioClass,
       updatedBy: updatedRecord.owner,
+      ownerRole: updatedRecord.ownerRole || '',
+      franchise: updatedRecord.franchise || '',
+      comments: updatedRecord.comments || '',
       lastUpdate: new Date().toISOString().slice(0, 10).replace(/-/g, '/')
     }));
 

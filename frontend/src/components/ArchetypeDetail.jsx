@@ -12,6 +12,27 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+// Pre-configured dropdown values for Franchise and Owner Role (can be updated when final LOV list is provided)
+const FRANCHISE_OPTIONS = [
+  'MedTech',
+  'Ethicon',
+  'DePuy Synthes',
+  'Biosense Webster',
+  'Vision',
+  'CSS',
+  'Innovative Medicine'
+];
+
+const OWNER_ROLE_OPTIONS = [
+  'Owner',
+  'Lead',
+  'Planner',
+  'Approver',
+  'Supply Chain Lead',
+  'Architect',
+  'Administrator'
+];
+
 export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack, onSaveEdit }) {
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -24,6 +45,8 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
     csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
     status: archetype?.status || archetype?.pfcStatus || 'Draft',
     owner: archetype?.owner || archetype?.ownerEmail || '',
+    ownerRole: archetype?.ownerRole || '',
+    franchise: archetype?.franchise || '',
     wave: archetype?.wave || '',
     shortDescription: archetype?.shortDescription || archetype?.description || '',
     legalEntities: archetype?.legalEntities || '',
@@ -32,7 +55,8 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
     project: archetype?.project || '',
     attachmentName: archetype?.attachmentName || archetype?.attachment || '',
     l1PhysicalFlow: archetype?.l1PhysicalFlow || '',
-    l1FinancialFlow: archetype?.l1FinancialFlow || ''
+    l1FinancialFlow: archetype?.l1FinancialFlow || '',
+    comments: archetype?.comments || ''
   });
 
   // Only show counters and nodes that the user actually defined
@@ -49,6 +73,8 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
       csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
       status: archetype?.status || archetype?.pfcStatus || 'Draft',
       owner: archetype?.owner || archetype?.ownerEmail || '',
+      ownerRole: archetype?.ownerRole || '',
+      franchise: archetype?.franchise || '',
       wave: archetype?.wave || '',
       shortDescription: archetype?.shortDescription || archetype?.description || '',
       legalEntities: archetype?.legalEntities || '',
@@ -57,7 +83,8 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
       project: archetype?.project || '',
       attachmentName: archetype?.attachmentName || archetype?.attachment || '',
       l1PhysicalFlow: archetype?.l1PhysicalFlow || '',
-      l1FinancialFlow: archetype?.l1FinancialFlow || ''
+      l1FinancialFlow: archetype?.l1FinancialFlow || '',
+      comments: archetype?.comments || ''
     });
     const currentCounters = archetype?.counters || [];
     setCounters(currentCounters);
@@ -185,6 +212,8 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
       csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
       status: archetype?.status || archetype?.pfcStatus || 'Draft',
       owner: archetype?.owner || archetype?.ownerEmail || '',
+      ownerRole: archetype?.ownerRole || '',
+      franchise: archetype?.franchise || '',
       wave: archetype?.wave || '',
       shortDescription: archetype?.shortDescription || archetype?.description || '',
       legalEntities: archetype?.legalEntities || '',
@@ -193,7 +222,8 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
       project: archetype?.project || '',
       attachmentName: archetype?.attachmentName || archetype?.attachment || '',
       l1PhysicalFlow: archetype?.l1PhysicalFlow || '',
-      l1FinancialFlow: archetype?.l1FinancialFlow || ''
+      l1FinancialFlow: archetype?.l1FinancialFlow || '',
+      comments: archetype?.comments || ''
     });
     setCounters(archetype?.counters || []);
     setNodes(archetype?.nodes || []);
@@ -265,6 +295,9 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
           archetypeId: newArchId,
           csclLaneId: newCsclId,
           owner: newOwner,
+          ownerRole: formData.ownerRole,
+          franchise: formData.franchise,
+          comments: formData.comments,
           nodesCount: `${nodes.length} nodes defined`,
           counters,
           nodes
@@ -431,7 +464,7 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
           </div>
         </div>
 
-        {/* Row 2: Owner, Wave, Short Description */}
+        {/* Row 2: Owner, Owner Role (Dropdown), Wave */}
         <div className="create-grid-3" style={{ marginTop: '16px' }}>
           <div className="form-group">
             <label>
@@ -452,6 +485,32 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
                 value={formData.owner || ''}
                 readOnly
                 className="read-only-input"
+              />
+            )}
+          </div>
+          <div className="form-group">
+            <label>Owner Role</label>
+            {isEditing ? (
+              <select
+                value={formData.ownerRole}
+                onChange={(e) => setFormData((p) => ({ ...p, ownerRole: e.target.value }))}
+                className="form-control-edit"
+              >
+                <option value="">Select Owner Role</option>
+                {OWNER_ROLE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.ownerRole && !OWNER_ROLE_OPTIONS.includes(formData.ownerRole) && (
+                  <option value={formData.ownerRole}>{formData.ownerRole}</option>
+                )}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.ownerRole || ''}
+                readOnly
+                className="read-only-input"
+                placeholder="Not specified"
               />
             )}
           </div>
@@ -478,7 +537,37 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
               />
             )}
           </div>
+        </div>
+
+        {/* Row 3: Franchise (Dropdown), Short Description */}
+        <div className="create-grid-3" style={{ marginTop: '16px' }}>
           <div className="form-group">
+            <label>Franchise</label>
+            {isEditing ? (
+              <select
+                value={formData.franchise}
+                onChange={(e) => setFormData((p) => ({ ...p, franchise: e.target.value }))}
+                className="form-control-edit"
+              >
+                <option value="">Select Franchise</option>
+                {FRANCHISE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.franchise && !FRANCHISE_OPTIONS.includes(formData.franchise) && (
+                  <option value={formData.franchise}>{formData.franchise}</option>
+                )}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.franchise || ''}
+                readOnly
+                className="read-only-input"
+                placeholder="Not specified"
+              />
+            )}
+          </div>
+          <div className="form-group span-2">
             <label>Short Description</label>
             {isEditing ? (
               <input
@@ -499,7 +588,7 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
           </div>
         </div>
 
-        {/* Row 3: Legal Entities */}
+        {/* Row 4: Legal Entities */}
         <div className="form-group" style={{ marginTop: '16px' }}>
           <label>Legal Entities</label>
           {isEditing ? (
@@ -520,7 +609,7 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
           )}
         </div>
 
-        {/* Row 4: Plan Team, Plan GRP, Project */}
+        {/* Row 5: Plan Team, Plan GRP, Project */}
         <div className="create-grid-3" style={{ marginTop: '16px' }}>
           <div className="form-group">
             <label>Plan Team</label>
@@ -581,7 +670,7 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
           </div>
         </div>
 
-        {/* Row 5: Nodes, Attachment, L1 Physical Flow */}
+        {/* Row 6: Nodes, Attachment, L1 Physical Flow */}
         <div className="create-grid-3" style={{ marginTop: '16px' }}>
           <div className="form-group">
             <label>
@@ -649,7 +738,7 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
           </div>
         </div>
 
-        {/* Row 6: L1 Financial Flow */}
+        {/* Row 7: L1 Financial Flow */}
         <div className="form-group" style={{ marginTop: '16px', maxWidth: '32%' }}>
           <label>L1 Financial Flow</label>
           {isEditing ? (
@@ -666,6 +755,30 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
               value={formData.l1FinancialFlow || ''}
               readOnly
               className="read-only-input"
+            />
+          )}
+        </div>
+
+        {/* Row 8: Comments */}
+        <div className="form-group" style={{ marginTop: '16px' }}>
+          <label>Comments</label>
+          {isEditing ? (
+            <textarea
+              rows={3}
+              value={formData.comments}
+              onChange={(e) => setFormData((p) => ({ ...p, comments: e.target.value }))}
+              className="form-control-edit"
+              placeholder="Add notes, operational comments or remarks..."
+              style={{ width: '100%', resize: 'vertical' }}
+            />
+          ) : (
+            <textarea
+              rows={3}
+              value={formData.comments || ''}
+              readOnly
+              className="read-only-input"
+              placeholder="No comments added"
+              style={{ width: '100%', resize: 'none' }}
             />
           )}
         </div>
