@@ -16,92 +16,113 @@ export const tables = {
   lane_headers: {
     tableName: 'lane_headers',
     columns: {
-      archetype_id: {
+      ARCHT_ID: {
         type: 'VARCHAR(50)',
         primaryKey: true,
         nullable: false
       },
-      cscl_lane_id: {
-        type: 'VARCHAR(50)',
-        nullable: false,
-        index: true
-      },
-      legal_entities: {
+      Short_desc: {
         type: 'VARCHAR(500)',
         nullable: true
       },
-      status: {
-        type: 'VARCHAR(50)',
-        nullable: false,
-        default: "'Draft'"
+      Owner_role: {
+        type: 'VARCHAR(100)',
+        nullable: true
       },
-      owner_email: {
+      Owner: {
         type: 'VARCHAR(255)',
+        nullable: true
+      },
+      CSCL_Lane_ID: {
+        type: 'VARCHAR(50)',
         nullable: false,
         index: true
       },
-      wave: {
+      Status: {
+        type: 'VARCHAR(50)',
+        nullable: false,
+        default: "'00-New'"
+      },
+      Wave: {
         type: 'VARCHAR(50)',
         nullable: true
       },
-      short_description: {
-        type: 'VARCHAR(500)',
+      Prev_Wave_CSCL_ID: {
+        type: 'VARCHAR(50)',
         nullable: true
       },
-      plan_team: {
-        type: 'VARCHAR(100)',
-        nullable: true
-      },
-      plan_grp: {
-        type: 'VARCHAR(100)',
-        nullable: true
-      },
-      project: {
-        type: 'VARCHAR(100)',
-        nullable: true
-      },
-      nodes_count: {
+      Nodes: {
         type: 'VARCHAR(50)',
         nullable: true,
         default: "'0 nodes defined'"
       },
-      attachment_name: {
-        type: 'VARCHAR(255)',
+      Plan_GRP: {
+        type: 'VARCHAR(100)',
         nullable: true
       },
-      visio_status: {
-        type: 'VARCHAR(50)',
-        nullable: true,
-        default: "'Not Uploaded'"
+      Franchise: {
+        type: 'VARCHAR(100)',
+        nullable: true
       },
-      approvals_approved: {
+      PLAN_team: {
+        type: 'VARCHAR(100)',
+        nullable: true
+      },
+      TranSCend_PRJ: {
+        type: 'VARCHAR(100)',
+        nullable: true
+      },
+      Comments: {
+        type: 'VARCHAR(MAX)',
+        nullable: true
+      },
+      SKU_Count: {
         type: 'INT',
         nullable: true,
         default: '0'
       },
-      approvals_total: {
-        type: 'INT',
-        nullable: true,
-        default: '3'
-      },
-      l1_physical_flow: {
-        type: 'VARCHAR(255)',
-        nullable: true
-      },
-      l1_financial_flow: {
-        type: 'VARCHAR(255)',
-        nullable: true
-      },
-      franchise: {
+      Sales_Vol: {
         type: 'VARCHAR(100)',
         nullable: true
       },
-      owner_role: {
+      Tranactions_Vol: {
         type: 'VARCHAR(100)',
         nullable: true
       },
-      comments: {
+      OMP_relevant: {
+        type: 'VARCHAR(50)',
+        nullable: true
+      },
+      LEGO: {
+        type: 'VARCHAR(50)',
+        nullable: true
+      },
+      Returns: {
+        type: 'VARCHAR(100)',
+        nullable: true
+      },
+      Physical_flow: {
+        type: 'VARCHAR(255)',
+        nullable: true
+      },
+      Financial_flow: {
+        type: 'VARCHAR(255)',
+        nullable: true
+      },
+      Description: {
+        type: 'VARCHAR(MAX)',
+        nullable: true
+      },
+      File_link: {
         type: 'VARCHAR(1000)',
+        nullable: true
+      },
+      prj_arch_ID: {
+        type: 'VARCHAR(100)',
+        nullable: true
+      },
+      Documentation: {
+        type: 'VARCHAR(MAX)',
         nullable: true
       },
       created_at: {

@@ -31,6 +31,13 @@
   padding: 0;
 }
 
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 body {
   font-family: var(--font-family);
   background-color: var(--bg-app);
@@ -42,20 +49,26 @@ body {
 .app-container {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
 
-/* Top Title Bar */
+/* Top Title Bar (Fixed at top) */
 .top-banner {
   background-color: var(--bg-surface);
   color: var(--text-main);
   padding: 0 24px;
   height: 52px;
+  min-height: 52px;
+  max-height: 52px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-color);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  z-index: 100;
 }
 
 .top-banner-left {
@@ -152,11 +165,20 @@ body {
 .main-layout {
   display: flex;
   flex: 1;
+  height: calc(100vh - 52px);
+  min-height: 0;
+  overflow: hidden;
 }
 
-/* Sidebar */
+/* Sidebar (Fixed on the left) */
 .sidebar {
   width: 245px;
+  min-width: 245px;
+  max-width: 245px;
+  flex-shrink: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   background-color: var(--bg-surface);
   border-right: 1px solid var(--border-color);
   padding: 24px 16px;
@@ -251,9 +273,14 @@ body {
   line-height: 1;
 }
 
-/* Content Area */
+/* Content Area (Only scrollable container in the app) */
 .content-area {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 28px 36px;
   display: flex;
   flex-direction: column;
@@ -2196,4 +2223,53 @@ body {
   background-color: #FFFFFF;
   display: block;
 }
+
+.detail-section-header {
+  border-bottom: 1px solid #E2E8F0;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+}
+
+.detail-section-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #1868FA;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.table-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  background-color: #F1F5F9;
+  color: #334155;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #E2E8F0;
+}
+
+.table-owner-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.table-owner-name {
+  font-weight: 600;
+  color: #1E293B;
+  font-size: 11.5px;
+}
+
+.table-owner-role {
+  font-size: 10.5px;
+  color: #64748B;
+}
+
+.project-cell {
+  font-weight: 500;
+  color: #334155;
+  font-size: 11.5px;
+}
+
 

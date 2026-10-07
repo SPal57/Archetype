@@ -50,10 +50,21 @@ export const FRANCHISE_OPTIONS = [
 
 // 3. Lane Statuses
 export const STATUS_OPTIONS = [
-  'Draft',
-  'New',
-  'In Review',
-  'Approved'
+  '00-Active no ILA',
+  '00-New',
+  '00-T1 Backlog',
+  '01-NPI',
+  '02-Data Construction',
+  '02-ILA creation TEST',
+  '03-Implementing ILA',
+  '03-TranSCend Project',
+  '04-On hold',
+  '05-Closed',
+  '05-Phasing Out',
+  '06-Canceled',
+  '07-LIVE',
+  'TT-Temp Active',
+  'ZZ-Technical status'
 ];
 
 // 4. Waves (Synced from SharePoint Waves_LOV list)
@@ -87,7 +98,7 @@ export const PATTERN_ID_OPTIONS = [
   'P-V-V-P'
 ];
 
-// 6. Search Status Options (Includes intermediate workflow states)
+// 6. Search Status Options (Includes intermediate workflow states + Lane Statuses)
 export const SEARCH_STATUS_OPTIONS = [
   'All Statuses',
   'Approved',
@@ -95,16 +106,46 @@ export const SEARCH_STATUS_OPTIONS = [
   'Ready for Approval',
   'New',
   'Draft',
-  'Reopened'
+  'Reopened',
+  '00-Active no ILA',
+  '00-New',
+  '00-T1 Backlog',
+  '01-NPI',
+  '02-Data Construction',
+  '02-ILA creation TEST',
+  '03-Implementing ILA',
+  '03-TranSCend Project',
+  '04-On hold',
+  '05-Closed',
+  '05-Phasing Out',
+  '06-Canceled',
+  '07-LIVE',
+  'TT-Temp Active',
+  'ZZ-Technical status'
 ];
 
-// 7. PFC Status Options (Advanced Search)
+// 7. PFC Status Options (Advanced Search + Lane Statuses)
 export const PFC_STATUS_OPTIONS = [
   'Any',
   'Approved',
   'New',
   'Draft',
-  'In Progress'
+  'In Progress',
+  '00-Active no ILA',
+  '00-New',
+  '00-T1 Backlog',
+  '01-NPI',
+  '02-Data Construction',
+  '02-ILA creation TEST',
+  '03-Implementing ILA',
+  '03-TranSCend Project',
+  '04-On hold',
+  '05-Closed',
+  '05-Phasing Out',
+  '06-Canceled',
+  '07-LIVE',
+  'TT-Temp Active',
+  'ZZ-Technical status'
 ];
 
 // 8. Node Types
@@ -140,6 +181,82 @@ export const USER_OPTIONS = [
   'Guest (not approver)'
 ];
 
+// 12. Plan GRP Options
+export const PLAN_GRP_OPTIONS = [
+  'PG-Global',
+  'PG-Regional',
+  'PG-Plant',
+  'PG-Commercial'
+];
+
+// 13. Plan Team Options
+export const PLAN_TEAM_OPTIONS = [
+  'Global Supply Planning',
+  'Regional Supply Planning',
+  'Site Planning',
+  'Value Stream Planning'
+];
+
+// 14. Project Options (TranSCend_PRJ / Project in UI)
+export const PROJECT_OPTIONS = [
+  'ASPAC OTC',
+  'DPS MAKE',
+  'CSS MAKE',
+  'GATT',
+  'GET',
+  'Kaleidoscope',
+  'LATAM OTC',
+  'LEGO',
+  'EMEA OTC',
+  'NA OTC',
+  'NPI/LCM',
+  'Operate State',
+  'Vision',
+  'Sirenia',
+  'Tundra',
+  'Ethicon MAKE',
+  'Japan MBP',
+  'TTR',
+  'SORA',
+  'ACE',
+  'T1 Retrofit',
+  'Epsilon',
+  'Marg-Accel',
+  'Osprey'
+];
+
+// 15. APS Relevant Options (OMP_relevant)
+export const APS_RELEVANT_OPTIONS = [
+  'Yes',
+  'No'
+];
+
+// 16. Returns Options
+export const RETURNS_OPTIONS = [
+  'Yes',
+  'No',
+  'N/A',
+  'Direct Return',
+  'Hub Return'
+];
+
+// 17. Physical Flow Options
+export const PHYSICAL_FLOW_OPTIONS = [
+  'Direct Ship',
+  'Cross-Dock',
+  'Hub & Spoke',
+  'Plant to DC',
+  'Vendor to Plant'
+];
+
+// 18. Financial Flow Options
+export const FINANCIAL_FLOW_OPTIONS = [
+  'Standard Intercompany',
+  'Drop-Ship Financial',
+  'Consignment',
+  'Third-Party Buy-Sell'
+];
+
 export default {
   OWNER_ROLE_OPTIONS,
   FRANCHISE_OPTIONS,
@@ -151,6 +268,13 @@ export default {
   NODE_TYPE_OPTIONS,
   NODE_PURPOSE_OPTIONS,
   INCO_TERM_OPTIONS,
-  USER_OPTIONS
+  USER_OPTIONS,
+  PLAN_GRP_OPTIONS,
+  PLAN_TEAM_OPTIONS,
+  PROJECT_OPTIONS,
+  APS_RELEVANT_OPTIONS,
+  RETURNS_OPTIONS,
+  PHYSICAL_FLOW_OPTIONS,
+  FINANCIAL_FLOW_OPTIONS
 };
 

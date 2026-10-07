@@ -56,6 +56,25 @@ class SchemaManager {
   }
 
   /**
+   * Drop a specific table through code
+   * Only drops the specified table if it exists; other tables and schemas remain untouched.
+   */
+  async dropTable(tableName, schemaName = SCHEMA_NAME) {
+    const pool = await getDbPool();
+    const query = `
+      IF OBJECT_ID(N'[${schemaName}].[${tableName}]', 'U') IS NOT NULL
+      BEGIN
+        DROP TABLE [${schemaName}].[${tableName}];
+        PRINT 'Table [${schemaName}].[${tableName}] dropped successfully.';
+      END
+    `;
+    console.log(`[SchemaManager] Dropping table [${schemaName}].[${tableName}] through code...`);
+    await pool.request().query(query);
+    console.log(`[SchemaManager] Table [${schemaName}].[${tableName}] dropped successfully.`);
+    return { success: true, table: tableName };
+  }
+
+  /**
    * Programmatically create a table through code
    * 
    * @param {string} tableName 
@@ -172,6 +191,10 @@ class SchemaManager {
     };
 
     for (const [tableName, tableConfig] of Object.entries(schemaConfig)) {
+      if (!tableConfig.columns || Object.keys(tableConfig.columns).length === 0) {
+        console.log(`[SchemaManager] Table [${tableName}] has no columns defined yet. Skipping auto-creation.`);
+        continue;
+      }
       report.tablesChecked++;
       const exists = await this.tableExists(tableName, schemaName);
 
@@ -180,6 +203,15 @@ class SchemaManager {
         report.tablesCreated.push(tableName);
       } else {
         const existingCols = await this.getExistingColumns(tableName, schemaName);
+        // If lane_headers exists with old legacy primary key 'archetype_id' instead of 'ARCHT_ID'
+        if (tableName === 'lane_headers' && existingCols.includes('archetype_id') && !existingCols.includes('archt_id')) {
+          console.log(`[SchemaManager] Detected legacy schema for [${schemaName}].[${tableName}]. Recreating with 26 new columns...`);
+          await this.dropTable(tableName, schemaName);
+          await this.createTable(tableName, tableConfig.columns, schemaName);
+          report.tablesCreated.push(`${tableName} (migrated to new schema)`);
+          continue;
+        }
+
         for (const [colName, colMeta] of Object.entries(tableConfig.columns)) {
           if (!existingCols.includes(colName.toLowerCase())) {
             await this.addColumn(tableName, colName, colMeta, schemaName);

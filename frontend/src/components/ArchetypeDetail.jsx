@@ -9,7 +9,8 @@ import {
   Plus,
   X,
   Check,
-  AlertCircle
+  AlertCircle,
+  Search
 } from 'lucide-react';
 
 import {
@@ -20,7 +21,14 @@ import {
   PATTERN_ID_OPTIONS,
   NODE_TYPE_OPTIONS,
   NODE_PURPOSE_OPTIONS,
-  INCO_TERM_OPTIONS
+  INCO_TERM_OPTIONS,
+  PLAN_GRP_OPTIONS,
+  PLAN_TEAM_OPTIONS,
+  PROJECT_OPTIONS,
+  APS_RELEVANT_OPTIONS,
+  RETURNS_OPTIONS,
+  PHYSICAL_FLOW_OPTIONS,
+  FINANCIAL_FLOW_OPTIONS
 } from '../data/lovData';
 
 export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack, onSaveEdit }) {
@@ -29,57 +37,77 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
   const [isSaving, setIsSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
-  // Editable form state initialized from archetype prop (no dummy fallbacks)
+  // Editable form state initialized from archetype prop
   const [formData, setFormData] = useState({
-    archetypeId: archetype?.archetypeId || archetype?.code || archetype?.id || '',
-    csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
-    status: archetype?.status || archetype?.pfcStatus || 'Draft',
-    owner: archetype?.owner || archetype?.ownerEmail || '',
+    archetypeId: archetype?.archetypeId || archetype?.archtId || archetype?.code || archetype?.id || '',
+    shortDesc: archetype?.shortDesc || archetype?.shortDescription || '',
     ownerRole: archetype?.ownerRole || '',
-    franchise: archetype?.franchise || '',
+    owner: archetype?.owner || archetype?.ownerEmail || '',
+    csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
+    status: archetype?.status || archetype?.pfcStatus || '00-New',
     wave: archetype?.wave || '',
-    shortDescription: archetype?.shortDescription || archetype?.description || '',
-    legalEntities: archetype?.legalEntities || '',
-    planTeam: archetype?.planTeam || '',
+    prevWaveCsclId: archetype?.prevWaveCsclId || '',
+    nodes: archetype?.nodes || `${archetype?.nodesCount || '0 nodes defined'}`,
     planGrp: archetype?.planGrp || '',
-    project: archetype?.project || '',
-    attachmentName: archetype?.attachmentName || archetype?.attachment || '',
-    l1PhysicalFlow: archetype?.l1PhysicalFlow || '',
-    l1FinancialFlow: archetype?.l1FinancialFlow || '',
-    comments: archetype?.comments || ''
+    franchise: archetype?.franchise || '',
+    planTeam: archetype?.planTeam || '',
+    transcendPrj: archetype?.transcendPrj || archetype?.project || '',
+    comments: archetype?.comments || '',
+    skuCount: archetype?.skuCount !== undefined && archetype?.skuCount !== null ? archetype?.skuCount : 0,
+    salesVol: archetype?.salesVol || '',
+    transactionsVol: archetype?.transactionsVol || '',
+    ompRelevant: archetype?.ompRelevant || archetype?.apsRelevant || '',
+    lego: archetype?.lego || '',
+    returns: archetype?.returns || '',
+    physicalFlow: archetype?.physicalFlow || archetype?.l1PhysicalFlow || '',
+    financialFlow: archetype?.financialFlow || archetype?.l1FinancialFlow || '',
+    description: archetype?.description || '',
+    fileLink: archetype?.fileLink || archetype?.attachmentName || '',
+    prjArchId: archetype?.prjArchId || '',
+    documentation: archetype?.documentation || ''
   });
 
   // Only show counters and nodes that the user actually defined
-  const [counters, setCounters] = useState(archetype?.counters || []);
-  const [nodes, setNodes] = useState(archetype?.nodes || []);
+  const [counters, setCounters] = useState(Array.isArray(archetype?.counters) ? archetype.counters : []);
+  const [nodes, setNodes] = useState(Array.isArray(archetype?.nodes) ? archetype.nodes : []);
   const [selectedCounterId, setSelectedCounterId] = useState(
-    archetype?.counters?.[0]?.counterId || ''
+    Array.isArray(archetype?.counters) ? archetype.counters[0]?.counterId || '' : ''
   );
 
   // Sync state whenever selected archetype changes
   useEffect(() => {
     setFormData({
-      archetypeId: archetype?.archetypeId || archetype?.code || archetype?.id || '',
-      csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
-      status: archetype?.status || archetype?.pfcStatus || 'Draft',
-      owner: archetype?.owner || archetype?.ownerEmail || '',
+      archetypeId: archetype?.archetypeId || archetype?.archtId || archetype?.code || archetype?.id || '',
+      shortDesc: archetype?.shortDesc || archetype?.shortDescription || '',
       ownerRole: archetype?.ownerRole || '',
-      franchise: archetype?.franchise || '',
+      owner: archetype?.owner || archetype?.ownerEmail || '',
+      csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
+      status: archetype?.status || archetype?.pfcStatus || '00-New',
       wave: archetype?.wave || '',
-      shortDescription: archetype?.shortDescription || archetype?.description || '',
-      legalEntities: archetype?.legalEntities || '',
-      planTeam: archetype?.planTeam || '',
+      prevWaveCsclId: archetype?.prevWaveCsclId || '',
+      nodes: typeof archetype?.nodes === 'string' ? archetype.nodes : `${archetype?.nodesCount || '0 nodes defined'}`,
       planGrp: archetype?.planGrp || '',
-      project: archetype?.project || '',
-      attachmentName: archetype?.attachmentName || archetype?.attachment || '',
-      l1PhysicalFlow: archetype?.l1PhysicalFlow || '',
-      l1FinancialFlow: archetype?.l1FinancialFlow || '',
-      comments: archetype?.comments || ''
+      franchise: archetype?.franchise || '',
+      planTeam: archetype?.planTeam || '',
+      transcendPrj: archetype?.transcendPrj || archetype?.project || '',
+      comments: archetype?.comments || '',
+      skuCount: archetype?.skuCount !== undefined && archetype?.skuCount !== null ? archetype?.skuCount : 0,
+      salesVol: archetype?.salesVol || '',
+      transactionsVol: archetype?.transactionsVol || '',
+      ompRelevant: archetype?.ompRelevant || archetype?.apsRelevant || '',
+      lego: archetype?.lego || '',
+      returns: archetype?.returns || '',
+      physicalFlow: archetype?.physicalFlow || archetype?.l1PhysicalFlow || '',
+      financialFlow: archetype?.financialFlow || archetype?.l1FinancialFlow || '',
+      description: archetype?.description || '',
+      fileLink: archetype?.fileLink || archetype?.attachmentName || '',
+      prjArchId: archetype?.prjArchId || '',
+      documentation: archetype?.documentation || ''
     });
-    const currentCounters = archetype?.counters || [];
+    const currentCounters = Array.isArray(archetype?.counters) ? archetype.counters : [];
     setCounters(currentCounters);
     setSelectedCounterId(currentCounters[0]?.counterId || '');
-    setNodes(archetype?.nodes || []);
+    setNodes(Array.isArray(archetype?.nodes) ? archetype.nodes : []);
     setIsEditing(false);
     setEditError('');
   }, [archetype]);
@@ -198,25 +226,35 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
   // Handle Cancel Edit
   const handleCancelEdit = () => {
     setFormData({
-      archetypeId: archetype?.archetypeId || archetype?.code || archetype?.id || '',
-      csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
-      status: archetype?.status || archetype?.pfcStatus || 'Draft',
-      owner: archetype?.owner || archetype?.ownerEmail || '',
+      archetypeId: archetype?.archetypeId || archetype?.archtId || archetype?.code || archetype?.id || '',
+      shortDesc: archetype?.shortDesc || archetype?.shortDescription || '',
       ownerRole: archetype?.ownerRole || '',
-      franchise: archetype?.franchise || '',
+      owner: archetype?.owner || archetype?.ownerEmail || '',
+      csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
+      status: archetype?.status || archetype?.pfcStatus || '00-New',
       wave: archetype?.wave || '',
-      shortDescription: archetype?.shortDescription || archetype?.description || '',
-      legalEntities: archetype?.legalEntities || '',
-      planTeam: archetype?.planTeam || '',
+      prevWaveCsclId: archetype?.prevWaveCsclId || '',
+      nodes: archetype?.nodes || `${archetype?.nodesCount || '0 nodes defined'}`,
       planGrp: archetype?.planGrp || '',
-      project: archetype?.project || '',
-      attachmentName: archetype?.attachmentName || archetype?.attachment || '',
-      l1PhysicalFlow: archetype?.l1PhysicalFlow || '',
-      l1FinancialFlow: archetype?.l1FinancialFlow || '',
-      comments: archetype?.comments || ''
+      franchise: archetype?.franchise || '',
+      planTeam: archetype?.planTeam || '',
+      transcendPrj: archetype?.transcendPrj || archetype?.project || '',
+      comments: archetype?.comments || '',
+      skuCount: archetype?.skuCount !== undefined && archetype?.skuCount !== null ? archetype?.skuCount : 0,
+      salesVol: archetype?.salesVol || '',
+      transactionsVol: archetype?.transactionsVol || '',
+      ompRelevant: archetype?.ompRelevant || archetype?.apsRelevant || '',
+      lego: archetype?.lego || '',
+      returns: archetype?.returns || '',
+      physicalFlow: archetype?.physicalFlow || archetype?.l1PhysicalFlow || '',
+      financialFlow: archetype?.financialFlow || archetype?.l1FinancialFlow || '',
+      description: archetype?.description || '',
+      fileLink: archetype?.fileLink || archetype?.attachmentName || '',
+      prjArchId: archetype?.prjArchId || '',
+      documentation: archetype?.documentation || ''
     });
-    setCounters(archetype?.counters || []);
-    setNodes(archetype?.nodes || []);
+    setCounters(Array.isArray(archetype?.counters) ? archetype.counters : []);
+    setNodes(Array.isArray(archetype?.nodes) ? archetype.nodes : []);
     setEditError('');
     setIsEditing(false);
   };
@@ -236,16 +274,12 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
       setEditError('CSCL Lane ID is a required field.');
       return;
     }
-    if (!newOwner) {
-      setEditError('Owner is a required field.');
-      return;
-    }
 
-    const originalArchId = (archetype?.archetypeId || archetype?.code || archetype?.id || '').trim();
+    const originalArchId = (archetype?.archetypeId || archetype?.archtId || archetype?.code || archetype?.id || '').trim();
 
     // 1. Check uniqueness of Archetype ID against all other existing archetypes
     const duplicateArch = allArchetypes.find((item) => {
-      const itemArchId = (item.archetypeId || item.code || item.id || '').trim();
+      const itemArchId = (item.archetypeId || item.archtId || item.code || item.id || '').trim();
       return (
         itemArchId.toUpperCase() === newArchId.toUpperCase() &&
         itemArchId.toUpperCase() !== originalArchId.toUpperCase()
@@ -261,7 +295,7 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
 
     // 2. Check uniqueness of CSCL Lane ID against all other existing archetypes
     const duplicateCscl = allArchetypes.find((item) => {
-      const itemArchId = (item.archetypeId || item.code || item.id || '').trim();
+      const itemArchId = (item.archetypeId || item.archtId || item.code || item.id || '').trim();
       const itemCsclId = (item.csclLaneId || item.laneId || '').trim();
       return (
         itemCsclId.toUpperCase() === newCsclId.toUpperCase() &&
@@ -383,7 +417,12 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
       <div className="create-card">
         <div className="create-card-section-title">LANE HEADER</div>
 
-        {/* Row 1: 3 columns */}
+        {/* SECTION 1: IDENTITY & OWNERSHIP */}
+        <div className="detail-section-header">
+          <span className="detail-section-title">IDENTITY & OWNERSHIP</span>
+        </div>
+
+        {/* Row 1: Archetype ID, Short Description, Owner Role */}
         <div className="create-grid-3">
           <div className="form-group">
             <label>
@@ -395,7 +434,7 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
                 value={formData.archetypeId}
                 onChange={(e) => setFormData((p) => ({ ...p, archetypeId: e.target.value }))}
                 className="form-control-edit"
-                placeholder="e.g. ARC-0001"
+                placeholder="A10B"
                 required
               />
             ) : (
@@ -407,77 +446,27 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
               />
             )}
           </div>
-          <div className="form-group">
-            <label>
-              CSCL Lane ID <span className="req-asterisk">*</span>
-            </label>
-            {isEditing ? (
-              <input
-                type="text"
-                value={formData.csclLaneId}
-                onChange={(e) => setFormData((p) => ({ ...p, csclLaneId: e.target.value }))}
-                className="form-control-edit"
-                placeholder="e.g. CSCL-1001"
-                required
-              />
-            ) : (
-              <input
-                type="text"
-                value={formData.csclLaneId || ''}
-                readOnly
-                className="read-only-input"
-              />
-            )}
-          </div>
-          <div className="form-group">
-            <label>
-              Status <span className="req-asterisk">*</span>
-            </label>
-            {isEditing ? (
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
-                className="form-control-edit"
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                value={formData.status || ''}
-                readOnly
-                className="read-only-input"
-              />
-            )}
-          </div>
-        </div>
 
-        {/* Row 2: Owner, Owner Role (Dropdown), Wave */}
-        <div className="create-grid-3" style={{ marginTop: '16px' }}>
           <div className="form-group">
-            <label>
-              Owner <span className="req-asterisk">*</span>
-            </label>
+            <label>Short Description</label>
             {isEditing ? (
               <input
                 type="text"
-                value={formData.owner}
-                onChange={(e) => setFormData((p) => ({ ...p, owner: e.target.value }))}
+                value={formData.shortDesc}
+                onChange={(e) => setFormData((p) => ({ ...p, shortDesc: e.target.value }))}
                 className="form-control-edit"
-                placeholder="Owner email (e.g. user@jnj.com)"
-                required
+                placeholder="Juarez - Megadyne Steris - HCS"
               />
             ) : (
               <input
                 type="text"
-                value={formData.owner || ''}
+                value={formData.shortDesc || ''}
                 readOnly
                 className="read-only-input"
               />
             )}
           </div>
+
           <div className="form-group">
             <label>Owner Role</label>
             {isEditing ? (
@@ -500,10 +489,91 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
                 value={formData.ownerRole || ''}
                 readOnly
                 className="read-only-input"
-                placeholder="Not specified"
+                placeholder="Select Owner Role"
               />
             )}
           </div>
+        </div>
+
+        {/* Row 2: Owner *, CSCL Lane ID *, Status * */}
+        <div className="create-grid-3" style={{ marginTop: '16px' }}>
+          <div className="form-group">
+            <label>Owner</label>
+            {isEditing ? (
+              <div className="input-with-icon">
+                <input
+                  type="text"
+                  value={formData.owner}
+                  onChange={(e) => setFormData((p) => ({ ...p, owner: e.target.value }))}
+                  className="form-control-edit"
+                  placeholder="EGarci47@its.jnj.com"
+                />
+                <Search size={14} className="inner-search-icon" />
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={formData.owner || ''}
+                readOnly
+                className="read-only-input"
+              />
+            )}
+          </div>
+
+          <div className="form-group">
+            <label>
+              CSCL Lane ID <span className="req-asterisk">*</span>
+            </label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.csclLaneId}
+                onChange={(e) => setFormData((p) => ({ ...p, csclLaneId: e.target.value }))}
+                className="form-control-edit"
+                placeholder="0000010095"
+                required
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.csclLaneId || ''}
+                readOnly
+                className="read-only-input"
+              />
+            )}
+          </div>
+
+          <div className="form-group">
+            <label>
+              Status <span className="req-asterisk">*</span>
+            </label>
+            {isEditing ? (
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
+                className="form-control-edit"
+              >
+                <option value="">Select Status</option>
+                {STATUS_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.status && !STATUS_OPTIONS.includes(formData.status) && (
+                  <option value={formData.status}>{formData.status}</option>
+                )}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.status || ''}
+                readOnly
+                className="read-only-input"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Row 3: Wave, Previous Wave CSCL ID, Nodes */}
+        <div className="create-grid-3" style={{ marginTop: '16px' }}>
           <div className="form-group">
             <label>Wave</label>
             {isEditing ? (
@@ -516,6 +586,9 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
                 {WAVE_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>{opt}</option>
                 ))}
+                {formData.wave && !WAVE_OPTIONS.includes(formData.wave) && (
+                  <option value={formData.wave}>{formData.wave}</option>
+                )}
               </select>
             ) : (
               <input
@@ -523,13 +596,73 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
                 value={formData.wave || ''}
                 readOnly
                 className="read-only-input"
+                placeholder="Select Wave"
               />
             )}
           </div>
+
+          <div className="form-group">
+            <label>Previous Wave CSCL ID</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.prevWaveCsclId}
+                onChange={(e) => setFormData((p) => ({ ...p, prevWaveCsclId: e.target.value }))}
+                className="form-control-edit"
+                placeholder="CSCL-PREV-000"
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.prevWaveCsclId || ''}
+                readOnly
+                className="read-only-input"
+                placeholder="CSCL-PREV-000"
+              />
+            )}
+          </div>
+
+          <div className="form-group">
+            <label>Nodes</label>
+            <input
+              type="text"
+              value={`${nodes.length} nodes defined`}
+              readOnly
+              className="read-only-input disabled-input"
+              placeholder="Enter node information"
+            />
+          </div>
         </div>
 
-        {/* Row 3: Franchise (Dropdown), Short Description */}
+        {/* Row 4: Plan GRP, Franchise */}
         <div className="create-grid-3" style={{ marginTop: '16px' }}>
+          <div className="form-group">
+            <label>Plan GRP</label>
+            {isEditing ? (
+              <select
+                value={formData.planGrp}
+                onChange={(e) => setFormData((p) => ({ ...p, planGrp: e.target.value }))}
+                className="form-control-edit"
+              >
+                <option value="">Select Plan GRP</option>
+                {PLAN_GRP_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.planGrp && !PLAN_GRP_OPTIONS.includes(formData.planGrp) && (
+                  <option value={formData.planGrp}>{formData.planGrp}</option>
+                )}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.planGrp || ''}
+                readOnly
+                className="read-only-input"
+                placeholder="Select Plan GRP"
+              />
+            )}
+          </div>
+
           <div className="form-group">
             <label>Franchise</label>
             {isEditing ? (
@@ -552,203 +685,75 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
                 value={formData.franchise || ''}
                 readOnly
                 className="read-only-input"
-                placeholder="Not specified"
-              />
-            )}
-          </div>
-          <div className="form-group span-2">
-            <label>Short Description</label>
-            {isEditing ? (
-              <input
-                type="text"
-                value={formData.shortDescription}
-                onChange={(e) => setFormData((p) => ({ ...p, shortDescription: e.target.value }))}
-                className="form-control-edit"
-                placeholder="Brief summary of archetype"
-              />
-            ) : (
-              <input
-                type="text"
-                value={formData.shortDescription || ''}
-                readOnly
-                className="read-only-input"
+                placeholder="Select Franchise"
               />
             )}
           </div>
         </div>
 
-        {/* Row 4: Legal Entities */}
-        <div className="form-group" style={{ marginTop: '16px' }}>
-          <label>Legal Entities</label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={formData.legalEntities}
-              onChange={(e) => setFormData((p) => ({ ...p, legalEntities: e.target.value }))}
-              className="form-control-edit"
-              placeholder="e.g. Johnson & Johnson Global Supply Chain"
-            />
-          ) : (
-            <input
-              type="text"
-              value={formData.legalEntities || ''}
-              readOnly
-              className="read-only-input"
-            />
-          )}
+        {/* SECTION 2: PLANNING & PROJECT */}
+        <div className="detail-section-header" style={{ marginTop: '28px' }}>
+          <span className="detail-section-title">PLANNING & PROJECT</span>
         </div>
 
-        {/* Row 5: Plan Team, Plan GRP, Project */}
-        <div className="create-grid-3" style={{ marginTop: '16px' }}>
+        {/* Row 1: Plan Team, Project (TranSCend_PRJ) */}
+        <div className="create-grid-2">
           <div className="form-group">
             <label>Plan Team</label>
             {isEditing ? (
-              <input
-                type="text"
+              <select
                 value={formData.planTeam}
                 onChange={(e) => setFormData((p) => ({ ...p, planTeam: e.target.value }))}
                 className="form-control-edit"
-                placeholder="Plan team"
-              />
+              >
+                <option value="">Select Plan Team</option>
+                {PLAN_TEAM_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.planTeam && !PLAN_TEAM_OPTIONS.includes(formData.planTeam) && (
+                  <option value={formData.planTeam}>{formData.planTeam}</option>
+                )}
+              </select>
             ) : (
               <input
                 type="text"
                 value={formData.planTeam || ''}
                 readOnly
                 className="read-only-input"
+                placeholder="Select Plan Team"
               />
             )}
           </div>
-          <div className="form-group">
-            <label>Plan GRP</label>
-            {isEditing ? (
-              <input
-                type="text"
-                value={formData.planGrp}
-                onChange={(e) => setFormData((p) => ({ ...p, planGrp: e.target.value }))}
-                className="form-control-edit"
-                placeholder="Plan GRP"
-              />
-            ) : (
-              <input
-                type="text"
-                value={formData.planGrp || ''}
-                readOnly
-                className="read-only-input"
-              />
-            )}
-          </div>
+
           <div className="form-group">
             <label>Project</label>
             {isEditing ? (
-              <input
-                type="text"
-                value={formData.project}
-                onChange={(e) => setFormData((p) => ({ ...p, project: e.target.value }))}
+              <select
+                value={formData.transcendPrj}
+                onChange={(e) => setFormData((p) => ({ ...p, transcendPrj: e.target.value }))}
                 className="form-control-edit"
-                placeholder="Project name or code"
-              />
+              >
+                <option value="">Select Project</option>
+                {PROJECT_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.transcendPrj && !PROJECT_OPTIONS.includes(formData.transcendPrj) && (
+                  <option value={formData.transcendPrj}>{formData.transcendPrj}</option>
+                )}
+              </select>
             ) : (
               <input
                 type="text"
-                value={formData.project || ''}
+                value={formData.transcendPrj || ''}
                 readOnly
                 className="read-only-input"
+                placeholder="Select Project"
               />
             )}
           </div>
         </div>
 
-        {/* Row 6: Nodes, Attachment, L1 Physical Flow */}
-        <div className="create-grid-3" style={{ marginTop: '16px' }}>
-          <div className="form-group">
-            <label>
-              Nodes <span className="label-badge">{nodes.length}</span>
-            </label>
-            <input
-              type="text"
-              value={`${nodes.length} nodes defined`}
-              readOnly
-              className="read-only-input"
-            />
-          </div>
-          <div className="form-group">
-            <label>Attachment</label>
-            {isEditing ? (
-              <input
-                type="text"
-                value={formData.attachmentName}
-                onChange={(e) => setFormData((p) => ({ ...p, attachmentName: e.target.value }))}
-                className="form-control-edit"
-                placeholder="Attachment file name (e.g. Visio_Specs.vsdx)"
-              />
-            ) : formData.attachmentName ? (
-              <div className="detail-attachment-pill">
-                <FileText size={14} className="attachment-icon" />
-                <a
-                  href="#download-spec"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    alert('Opening ' + formData.attachmentName);
-                  }}
-                  className="attachment-link"
-                >
-                  {formData.attachmentName}
-                </a>
-              </div>
-            ) : (
-              <input
-                type="text"
-                value=""
-                placeholder="No file attached"
-                readOnly
-                className="read-only-input"
-              />
-            )}
-          </div>
-          <div className="form-group">
-            <label>L1 Physical Flow</label>
-            {isEditing ? (
-              <input
-                type="text"
-                value={formData.l1PhysicalFlow}
-                onChange={(e) => setFormData((p) => ({ ...p, l1PhysicalFlow: e.target.value }))}
-                className="form-control-edit"
-                placeholder="L1 Physical Flow"
-              />
-            ) : (
-              <input
-                type="text"
-                value={formData.l1PhysicalFlow || ''}
-                readOnly
-                className="read-only-input"
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Row 7: L1 Financial Flow */}
-        <div className="form-group" style={{ marginTop: '16px', maxWidth: '32%' }}>
-          <label>L1 Financial Flow</label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={formData.l1FinancialFlow}
-              onChange={(e) => setFormData((p) => ({ ...p, l1FinancialFlow: e.target.value }))}
-              className="form-control-edit"
-              placeholder="L1 Financial Flow"
-            />
-          ) : (
-            <input
-              type="text"
-              value={formData.l1FinancialFlow || ''}
-              readOnly
-              className="read-only-input"
-            />
-          )}
-        </div>
-
-        {/* Row 8: Comments */}
+        {/* Row 2: Comments */}
         <div className="form-group" style={{ marginTop: '16px' }}>
           <label>Comments</label>
           {isEditing ? (
@@ -757,7 +762,7 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
               value={formData.comments}
               onChange={(e) => setFormData((p) => ({ ...p, comments: e.target.value }))}
               className="form-control-edit"
-              placeholder="Add notes, operational comments or remarks..."
+              placeholder="Add planning notes or comments..."
               style={{ width: '100%', resize: 'vertical' }}
             />
           ) : (
@@ -766,8 +771,341 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
               value={formData.comments || ''}
               readOnly
               className="read-only-input"
-              placeholder="No comments added"
+              placeholder="Add planning notes or comments..."
               style={{ width: '100%', resize: 'none' }}
+            />
+          )}
+        </div>
+
+        {/* SECTION 3: VOLUMES & FLOW */}
+        <div className="detail-section-header" style={{ marginTop: '28px' }}>
+          <span className="detail-section-title">VOLUMES & FLOW</span>
+        </div>
+
+        {/* Row 1: SKU Count, Sales Volume, Transactions Volume */}
+        <div className="create-grid-3">
+          <div className="form-group">
+            <label>SKU Count</label>
+            {isEditing ? (
+              <input
+                type="number"
+                value={formData.skuCount}
+                onChange={(e) => setFormData((p) => ({ ...p, skuCount: e.target.value }))}
+                className="form-control-edit"
+                placeholder="0"
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.skuCount !== undefined && formData.skuCount !== null ? formData.skuCount : '0'}
+                readOnly
+                className="read-only-input"
+              />
+            )}
+          </div>
+
+          <div className="form-group">
+            <label>Sales Volume</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.salesVol}
+                onChange={(e) => setFormData((p) => ({ ...p, salesVol: e.target.value }))}
+                className="form-control-edit"
+                placeholder="Annual sales volume"
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.salesVol || ''}
+                readOnly
+                className="read-only-input"
+                placeholder="Annual sales volume"
+              />
+            )}
+          </div>
+
+          <div className="form-group">
+            <label>Transactions Volume</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.transactionsVol}
+                onChange={(e) => setFormData((p) => ({ ...p, transactionsVol: e.target.value }))}
+                className="form-control-edit"
+                placeholder="Annual transaction volume"
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.transactionsVol || ''}
+                readOnly
+                className="read-only-input"
+                placeholder="Annual transaction volume"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Row 2: APS Relevant (OMP_relevant), LEGO, Returns */}
+        <div className="create-grid-3" style={{ marginTop: '16px' }}>
+          <div className="form-group">
+            <label>APS Relevant</label>
+            {isEditing ? (
+              <select
+                value={formData.ompRelevant}
+                onChange={(e) => setFormData((p) => ({ ...p, ompRelevant: e.target.value }))}
+                className="form-control-edit"
+              >
+                <option value="">Select APS Relevant</option>
+                {APS_RELEVANT_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.ompRelevant && !APS_RELEVANT_OPTIONS.includes(formData.ompRelevant) && (
+                  <option value={formData.ompRelevant}>{formData.ompRelevant}</option>
+                )}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.ompRelevant || ''}
+                readOnly
+                className="read-only-input"
+                placeholder="Select APS Relevant"
+              />
+            )}
+          </div>
+
+          <div className="form-group">
+            <label>LEGO</label>
+            <div style={{ display: 'flex', alignItems: 'center', height: '38px', gap: '8px' }}>
+              <input
+                type="checkbox"
+                id="lego-na"
+                checked={formData.lego === 'Not Applicable' || formData.lego === true || formData.lego === 'true'}
+                disabled={!isEditing}
+                onChange={(e) => setFormData((p) => ({ ...p, lego: e.target.checked ? 'Not Applicable' : '' }))}
+                style={{ width: '16px', height: '16px', cursor: isEditing ? 'pointer' : 'default' }}
+              />
+              <label
+                htmlFor="lego-na"
+                style={{ margin: 0, fontWeight: 500, cursor: isEditing ? 'pointer' : 'default', color: '#475569', fontSize: '13px' }}
+              >
+                Not Applicable
+              </label>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Returns</label>
+            {isEditing ? (
+              <select
+                value={formData.returns}
+                onChange={(e) => setFormData((p) => ({ ...p, returns: e.target.value }))}
+                className="form-control-edit"
+              >
+                <option value="">Select Returns</option>
+                {RETURNS_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.returns && !RETURNS_OPTIONS.includes(formData.returns) && (
+                  <option value={formData.returns}>{formData.returns}</option>
+                )}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.returns || ''}
+                readOnly
+                className="read-only-input"
+                placeholder="Select Returns"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Row 3: Physical Flow, Financial Flow */}
+        <div className="create-grid-2" style={{ marginTop: '16px' }}>
+          <div className="form-group">
+            <label>Physical Flow</label>
+            {isEditing ? (
+              <select
+                value={formData.physicalFlow}
+                onChange={(e) => setFormData((p) => ({ ...p, physicalFlow: e.target.value }))}
+                className="form-control-edit"
+              >
+                <option value="">Select Physical Flow</option>
+                {PHYSICAL_FLOW_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.physicalFlow && !PHYSICAL_FLOW_OPTIONS.includes(formData.physicalFlow) && (
+                  <option value={formData.physicalFlow}>{formData.physicalFlow}</option>
+                )}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.physicalFlow || ''}
+                readOnly
+                className="read-only-input"
+                placeholder="Select Physical Flow"
+              />
+            )}
+          </div>
+
+          <div className="form-group">
+            <label>Financial Flow</label>
+            {isEditing ? (
+              <select
+                value={formData.financialFlow}
+                onChange={(e) => setFormData((p) => ({ ...p, financialFlow: e.target.value }))}
+                className="form-control-edit"
+              >
+                <option value="">Select Financial Flow</option>
+                {FINANCIAL_FLOW_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.financialFlow && !FINANCIAL_FLOW_OPTIONS.includes(formData.financialFlow) && (
+                  <option value={formData.financialFlow}>{formData.financialFlow}</option>
+                )}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.financialFlow || ''}
+                readOnly
+                className="read-only-input"
+                placeholder="Select Financial Flow"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* SECTION 4: DESCRIPTION & DOCUMENTATION */}
+        <div className="detail-section-header" style={{ marginTop: '28px' }}>
+          <span className="detail-section-title">DESCRIPTION & DOCUMENTATION</span>
+        </div>
+
+        {/* Row 1: Description */}
+        <div className="form-group">
+          <label>Description</label>
+          {isEditing ? (
+            <textarea
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
+              className="form-control-edit"
+              placeholder="Describe the lane purpose and scope..."
+              style={{ width: '100%', resize: 'vertical' }}
+            />
+          ) : (
+            <textarea
+              rows={3}
+              value={formData.description || ''}
+              readOnly
+              className="read-only-input"
+              placeholder="Describe the lane purpose and scope..."
+              style={{ width: '100%', resize: 'none' }}
+            />
+          )}
+        </div>
+
+        {/* Row 2: File Link with Browse, Documentation */}
+        <div className="create-grid-2" style={{ marginTop: '16px' }}>
+          <div className="form-group">
+            <label>File Link</label>
+            {isEditing ? (
+              <div className="attachment-input-wrapper">
+                <input
+                  type="text"
+                  value={formData.fileLink}
+                  onChange={(e) => setFormData((p) => ({ ...p, fileLink: e.target.value }))}
+                  className="form-control-edit"
+                  placeholder="Document URL or filename"
+                />
+                <button
+                  type="button"
+                  className="btn-browse-file"
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.onchange = (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setFormData((p) => ({ ...p, fileLink: file.name }));
+                      }
+                    };
+                    input.click();
+                  }}
+                >
+                  Browse
+                </button>
+              </div>
+            ) : formData.fileLink ? (
+              <div className="detail-attachment-pill">
+                <FileText size={14} className="attachment-icon" />
+                <a
+                  href="#download-file"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    alert('Opening ' + formData.fileLink);
+                  }}
+                  className="attachment-link"
+                >
+                  {formData.fileLink}
+                </a>
+              </div>
+            ) : (
+              <input
+                type="text"
+                value=""
+                readOnly
+                className="read-only-input"
+                placeholder="Document URL or filename"
+              />
+            )}
+          </div>
+
+          <div className="form-group">
+            <label>Documentation</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.documentation}
+                onChange={(e) => setFormData((p) => ({ ...p, documentation: e.target.value }))}
+                className="form-control-edit"
+                placeholder="Documentation summary or reference..."
+              />
+            ) : (
+              <input
+                type="text"
+                value={formData.documentation || ''}
+                readOnly
+                className="read-only-input"
+                placeholder="Documentation summary or reference..."
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Row 3: Project Archetype ID */}
+        <div className="form-group" style={{ marginTop: '16px', maxWidth: '32%' }}>
+          <label>Project Archetype ID</label>
+          {isEditing ? (
+            <input
+              type="text"
+              value={formData.prjArchId}
+              onChange={(e) => setFormData((p) => ({ ...p, prjArchId: e.target.value }))}
+              className="form-control-edit"
+              placeholder="e.g. PRJ-ARCH-01"
+            />
+          ) : (
+            <input
+              type="text"
+              value={formData.prjArchId || ''}
+              readOnly
+              className="read-only-input"
+              placeholder="Not specified"
             />
           )}
         </div>
@@ -777,7 +1115,7 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
       <div className="create-card">
         <div className="create-card-header-row">
           <div className="create-card-section-title">
-            COUNTER <span className="label-badge">{counters.length}</span>
+            COUNTER <span className="label-badge">{Array.isArray(counters) ? counters.length : 0}</span>
           </div>
           {isEditing && (
             <button
@@ -791,7 +1129,7 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
           )}
         </div>
 
-        {counters.length === 0 ? (
+        {(!Array.isArray(counters) || counters.length === 0) ? (
           <div className="detail-empty-box">
             <p>No counters defined yet for this archetype.</p>
             {isEditing && (
@@ -866,7 +1204,7 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
       <div className="create-card">
         <div className="create-card-header-row">
           <div className="create-card-section-title">
-            NODES <span className="nodes-item-count">{nodes.length} items</span>
+            NODES <span className="nodes-item-count">{Array.isArray(nodes) ? nodes.length : 0} items</span>
           </div>
           {isEditing && (
             <button
@@ -880,7 +1218,7 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
           )}
         </div>
 
-        {nodes.length === 0 ? (
+        {(!Array.isArray(nodes) || nodes.length === 0) ? (
           <div className="detail-empty-box">
             <p>No nodes defined yet for this archetype.</p>
             {isEditing && (
@@ -910,7 +1248,7 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
                 </tr>
               </thead>
               <tbody>
-                {nodes.map((node, idx) => (
+                {Array.isArray(nodes) && nodes.map((node, idx) => (
                   <tr key={node.uniqueId || idx}>
                     <td>{node.archetype}</td>
                     <td>{node.uniqueId}</td>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import TopBanner from './components/TopBanner';
 import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
@@ -11,36 +11,129 @@ import ArchetypeDetail from './components/ArchetypeDetail';
 import { initialArchetypesData } from './data/archetypesData';
 import { Download } from 'lucide-react';
 
+const getInitialRoute = () => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('view') || 'list';
+    const id = params.get('id');
+    const mode = params.get('mode') || 'blank';
+    const ref = params.get('ref');
+    return { view, id, mode, ref };
+  } catch {
+    return { view: 'list', id: null, mode: 'blank', ref: null };
+  }
+};
+
 export default function App() {
+  const initialRoute = useMemo(() => getInitialRoute(), []);
   const [currentUser, setCurrentUser] = useState('Andres Simar');
   const [activeTab, setActiveTab] = useState('all');
-  const [currentView, setCurrentView] = useState('list'); // 'list' | 'create' | 'detail'
-  const [selectedArchetype, setSelectedArchetype] = useState(null);
+  const [currentView, setCurrentView] = useState(initialRoute.view); // 'list' | 'create' | 'detail'
+  const [selectedArchetype, setSelectedArchetype] = useState(
+    initialRoute.id ? { archetypeId: initialRoute.id, archtId: initialRoute.id, id: initialRoute.id } : null
+  );
+  const [createMode, setCreateMode] = useState(initialRoute.mode); // 'blank' | 'clone'
+  const [referenceArchetype, setReferenceArchetype] = useState(null);
   const [allArchetypes, setAllArchetypes] = useState(initialArchetypesData);
   const [activeSearchCriteria, setActiveSearchCriteria] = useState(null);
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Reusable fetch archetypes from backend database API
+  const fetchArchetypes = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch('http://localhost:5000/api/lane-headers');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setAllArchetypes(json.data);
+          return json.data;
+        }
+      }
+    } catch (err) {
+      console.log('Backend API note: Running with local memory state.', err.message);
+    } finally {
+      setIsLoading(false);
+    }
+    return null;
+  }, []);
+
   // Fetch archetypes from backend database API on mount
   useEffect(() => {
-    const fetchArchetypes = async () => {
-      try {
-        setIsLoading(true);
-        const res = await fetch('http://localhost:5000/api/lane-headers');
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && Array.isArray(json.data)) {
-            setAllArchetypes(json.data);
-          }
+    fetchArchetypes().then((data) => {
+      if (data) {
+        if (initialRoute.view === 'detail' && initialRoute.id) {
+          const match = data.find(
+            (a) => (a.archtId || a.archetypeId || a.code || a.id) === initialRoute.id
+          );
+          if (match) setSelectedArchetype(match);
         }
-      } catch (err) {
-        // Backend offline or local development: retain local state
-        console.log('Backend API note: Running with local memory state.', err.message);
-      } finally {
-        setIsLoading(false);
+        if (initialRoute.view === 'create' && initialRoute.ref) {
+          const matchRef = data.find(
+            (a) => (a.archtId || a.archetypeId || a.code || a.id) === initialRoute.ref
+          );
+          if (matchRef) setReferenceArchetype(matchRef);
+        }
+      }
+    });
+  }, [fetchArchetypes, initialRoute]);
+
+  // Browser Navigation & History Popstate Listener (Supports Browser Back & Forward buttons)
+  useEffect(() => {
+    // Ensure base entry has valid state so clicking back to root works cleanly
+    if (!window.history.state) {
+      window.history.replaceState(
+        {
+          view: initialRoute.view,
+          id: initialRoute.id,
+          mode: initialRoute.mode,
+          refId: initialRoute.ref
+        },
+        '',
+        window.location.search || window.location.pathname
+      );
+    }
+
+    const handlePopState = (event) => {
+      const state = event.state;
+      const params = new URLSearchParams(window.location.search);
+      const view = params.get('view') || state?.view || 'list';
+      const id = params.get('id') || state?.id;
+      const mode = params.get('mode') || state?.mode || 'blank';
+      const refId = params.get('ref') || state?.refId;
+
+      if (view === 'detail' && id) {
+        setAllArchetypes((list) => {
+          const match = list.find(
+            (a) => (a.archtId || a.archetypeId || a.code || a.id) === id
+          );
+          setSelectedArchetype(match || { archetypeId: id, archtId: id, id });
+          return list;
+        });
+        setCurrentView('detail');
+      } else if (view === 'create') {
+        setCreateMode(mode);
+        if (refId) {
+          setAllArchetypes((list) => {
+            const matchRef = list.find(
+              (a) => (a.archtId || a.archetypeId || a.code || a.id) === refId
+            );
+            setReferenceArchetype(matchRef || null);
+            return list;
+          });
+        } else {
+          setReferenceArchetype(null);
+        }
+        setCurrentView('create');
+      } else {
+        setCurrentView('list');
+        setSelectedArchetype(null);
       }
     };
-    fetchArchetypes();
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
   
   // Modal State for notifications/actions
@@ -88,7 +181,10 @@ export default function App() {
       // Lane ID
       if (activeSearchCriteria.laneId) {
         const queryLane = activeSearchCriteria.laneId.trim().toLowerCase();
-        if (!item.laneId?.toLowerCase().includes(queryLane)) {
+        const laneMatch = item.laneId?.toLowerCase().includes(queryLane) ||
+          item.csclLaneId?.toLowerCase().includes(queryLane) ||
+          item.prevWaveCsclId?.toLowerCase().includes(queryLane);
+        if (!laneMatch) {
           return false;
         }
       }
@@ -96,7 +192,10 @@ export default function App() {
       // Archetype ID / Code
       if (activeSearchCriteria.archetypeId) {
         const queryCode = activeSearchCriteria.archetypeId.trim().toLowerCase();
-        const codeMatch = item.code?.toLowerCase().includes(queryCode);
+        const codeMatch = item.code?.toLowerCase().includes(queryCode) ||
+          item.archetypeId?.toLowerCase().includes(queryCode) ||
+          item.archtId?.toLowerCase().includes(queryCode) ||
+          item.prjArchId?.toLowerCase().includes(queryCode);
         const codeLinesMatch = item.codeLines?.some((part) =>
           part.toLowerCase().includes(queryCode)
         );
@@ -106,7 +205,10 @@ export default function App() {
       // Description / Title
       if (activeSearchCriteria.description) {
         const queryDesc = activeSearchCriteria.description.trim().toLowerCase();
-        const descMatch = item.description?.toLowerCase().includes(queryDesc);
+        const descMatch = item.description?.toLowerCase().includes(queryDesc) ||
+          item.shortDesc?.toLowerCase().includes(queryDesc) ||
+          item.shortDescription?.toLowerCase().includes(queryDesc) ||
+          item.comments?.toLowerCase().includes(queryDesc);
         const titleMatch = item.title?.toLowerCase().includes(queryDesc);
         if (!descMatch && !titleMatch) return false;
       }
@@ -114,7 +216,9 @@ export default function App() {
       // Owner
       if (activeSearchCriteria.owner) {
         const queryOwner = activeSearchCriteria.owner.trim().toLowerCase();
-        const ownerMatch = item.owner?.toLowerCase().includes(queryOwner);
+        const ownerMatch = item.owner?.toLowerCase().includes(queryOwner) ||
+          item.ownerRole?.toLowerCase().includes(queryOwner) ||
+          item.ownerEmail?.toLowerCase().includes(queryOwner);
         const updatedByMatch = item.updatedBy?.toLowerCase().includes(queryOwner);
         if (!ownerMatch && !updatedByMatch) return false;
       }
@@ -141,42 +245,86 @@ export default function App() {
     }));
   };
 
-  // Handle Code click on row (specifically redirects to detail for row 1)
+  // Handle Code / View click on row (navigates to detail)
   const handleCodeClick = (row) => {
+    const archId = row?.archtId || row?.archetypeId || row?.code || row?.id || '';
     setSelectedArchetype(row);
     setCurrentView('detail');
+    const newUrl = `?view=detail&id=${encodeURIComponent(archId)}`;
+    window.history.pushState({ view: 'detail', id: archId }, '', newUrl);
   };
-
-  const [createMode, setCreateMode] = useState('blank'); // 'blank' | 'clone'
-  const [referenceArchetype, setReferenceArchetype] = useState(null);
 
   // Handle + Create button click (mode: 'blank' or 'clone')
   const handleCreateClick = (mode = 'blank', referenceItem = null) => {
     setCreateMode(mode);
     setReferenceArchetype(referenceItem);
     setCurrentView('create');
+    const refId = referenceItem
+      ? referenceItem.archtId || referenceItem.archetypeId || referenceItem.code || referenceItem.id
+      : '';
+    const newUrl = refId
+      ? `?view=create&mode=${mode}&ref=${encodeURIComponent(refId)}`
+      : `?view=create&mode=${mode}`;
+    window.history.pushState({ view: 'create', mode, refId }, '', newUrl);
+  };
+
+  // Handle in-app back buttons (both breadcrumb back buttons)
+  const handleInAppBack = () => {
+    if (window.history.state && window.history.state.view && window.history.state.view !== 'list') {
+      window.history.back();
+    } else {
+      setCurrentView('list');
+      setSelectedArchetype(null);
+      window.history.pushState({ view: 'list' }, '', window.location.pathname);
+    }
   };
 
   // Handle Save from Create / Clone Archetype form
   const handleSaveArchetype = async (newRecord) => {
-    const hasVisio = Boolean(newRecord.attachment && newRecord.attachment.trim());
-    const codeValue = newRecord.archetypeId?.trim() || `ARC-${Date.now().toString().slice(-4)}`;
-    const laneValue = newRecord.csclLaneId?.trim() || `CSCL-${Date.now().toString().slice(-4)}`;
-    const descValue = (newRecord.shortDescription || '').trim();
-    const legalEntitiesValue = (newRecord.legalEntities || '').trim();
+    const hasVisio = Boolean((newRecord.fileLink || newRecord.attachment || newRecord.attachmentName || '').trim());
+    const codeValue = (newRecord.archetypeId || newRecord.archtId || '').trim();
+    const laneValue = (newRecord.csclLaneId || newRecord.laneId || '').trim();
+    const descValue = (newRecord.shortDesc || newRecord.shortDescription || '').trim();
+    const projectValue = (newRecord.transcendPrj || newRecord.project || '').trim();
+    const apsValue = (newRecord.ompRelevant || newRecord.apsRelevant || '').trim();
 
     const formattedRecord = {
+      ...newRecord,
       id: codeValue,
       archetypeId: codeValue,
+      archtId: codeValue,
       csclLaneId: laneValue,
       laneId: laneValue,
       codeLines: codeValue.includes('-') ? codeValue.split('-') : [codeValue],
       code: codeValue,
+      shortDesc: descValue,
       shortDescription: descValue,
-      description: descValue,
-      legalEntities: legalEntitiesValue,
-      status: newRecord.status || 'Draft',
-      pfcStatus: newRecord.status || 'Draft',
+      description: newRecord.description || descValue,
+      ownerRole: newRecord.ownerRole || '',
+      owner: newRecord.owner || currentUser,
+      ownerEmail: newRecord.owner || currentUser,
+      wave: newRecord.wave || '',
+      prevWaveCsclId: newRecord.prevWaveCsclId || '',
+      planGrp: newRecord.planGrp || '',
+      franchise: newRecord.franchise || '',
+      planTeam: newRecord.planTeam || '',
+      project: projectValue,
+      transcendPrj: projectValue,
+      comments: newRecord.comments || '',
+      skuCount: newRecord.skuCount !== undefined && newRecord.skuCount !== null && newRecord.skuCount !== '' ? Number(newRecord.skuCount) : 0,
+      salesVol: newRecord.salesVol || '',
+      transactionsVol: newRecord.transactionsVol || '',
+      apsRelevant: apsValue,
+      ompRelevant: apsValue,
+      lego: newRecord.lego || '',
+      returns: newRecord.returns || '',
+      physicalFlow: newRecord.physicalFlow || newRecord.l1PhysicalFlow || '',
+      financialFlow: newRecord.financialFlow || newRecord.l1FinancialFlow || '',
+      fileLink: newRecord.fileLink || '',
+      prjArchId: newRecord.prjArchId || '',
+      documentation: newRecord.documentation || '',
+      status: newRecord.status || '00-New',
+      pfcStatus: newRecord.status || '00-New',
       pfcStatusClass: newRecord.status === 'Approved' ? 'status-dot-approved' : (newRecord.status === 'In Review' ? 'status-dot-review' : 'status-dot-new'),
       visioStatus: hasVisio ? 'Approval In Progress' : 'Not Uploaded',
       visioClass: hasVisio ? 'in-progress' : 'not-uploaded',
@@ -185,135 +333,250 @@ export default function App() {
         total: 3,
         steps: hasVisio ? ['approved', 'pending', 'pending'] : ['pending', 'pending', 'pending']
       },
-      lastUpdate: new Date().toISOString().slice(0, 10).replace(/-/g, '/'),
+      lastUpdate: new Date().toISOString().slice(0, 10),
       updatedBy: newRecord.owner || currentUser,
-      patternId: 'P-P',
-      owner: newRecord.owner,
-      ownerRole: newRecord.ownerRole || '',
-      franchise: newRecord.franchise || '',
-      comments: newRecord.comments || '',
-      wave: newRecord.wave,
-      planTeam: newRecord.planTeam,
-      planGrp: newRecord.planGrp,
-      project: newRecord.project,
-      nodesCount: newRecord.nodesCount || `${newRecord.nodes?.length || 0} nodes defined`,
-      attachmentName: newRecord.attachment,
-      attachment: newRecord.attachment,
-      l1PhysicalFlow: newRecord.l1PhysicalFlow,
-      l1FinancialFlow: newRecord.l1FinancialFlow,
-      counters: newRecord.counters || [],
-      nodes: newRecord.nodes || []
+      nodes: Array.isArray(newRecord.nodes) ? newRecord.nodes : [],
+      nodesCount: typeof newRecord.nodesCount === 'string' ? newRecord.nodesCount : `${Array.isArray(newRecord.nodes) ? newRecord.nodes.length : 0} nodes defined`,
+      attachmentName: newRecord.fileLink || newRecord.attachment || '',
+      attachment: newRecord.fileLink || newRecord.attachment || '',
+      counters: newRecord.counters || []
     };
 
-    // 1. Optimistic UI update: immediately add to list
-    setAllArchetypes((prev) => [formattedRecord, ...prev]);
-    setCurrentView('list');
-
-    // 2. Persist to Express backend / Azure SQL
+    // Persist to Express backend / Azure SQL
     try {
-      await fetch('http://localhost:5000/api/lane-headers', {
+      const res = await fetch('http://localhost:5000/api/lane-headers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...newRecord,
+          ARCHT_ID: codeValue,
           archetypeId: codeValue,
+          CSCL_Lane_ID: laneValue,
           csclLaneId: laneValue,
-          code: codeValue,
+          Short_desc: descValue,
+          shortDesc: descValue,
           shortDescription: descValue,
-          legalEntities: legalEntitiesValue,
-          status: newRecord.status || 'Draft',
-          owner: newRecord.owner,
+          Owner: newRecord.owner || currentUser,
+          owner: newRecord.owner || currentUser,
+          Owner_role: newRecord.ownerRole || '',
           ownerRole: newRecord.ownerRole || '',
+          Wave: newRecord.wave || '',
+          wave: newRecord.wave || '',
+          Prev_Wave_CSCL_ID: newRecord.prevWaveCsclId || '',
+          prevWaveCsclId: newRecord.prevWaveCsclId || '',
+          Nodes: typeof newRecord.nodesCount === 'string' ? newRecord.nodesCount : (Array.isArray(newRecord.nodes) ? `${newRecord.nodes.length} nodes defined` : '0 nodes defined'),
+          nodesCount: typeof newRecord.nodesCount === 'string' ? newRecord.nodesCount : (Array.isArray(newRecord.nodes) ? `${newRecord.nodes.length} nodes defined` : '0 nodes defined'),
+          Plan_GRP: newRecord.planGrp || '',
+          planGrp: newRecord.planGrp || '',
+          Franchise: newRecord.franchise || '',
           franchise: newRecord.franchise || '',
+          PLAN_team: newRecord.planTeam || '',
+          planTeam: newRecord.planTeam || '',
+          TranSCend_PRJ: projectValue,
+          project: projectValue,
+          transcendPrj: projectValue,
+          Comments: newRecord.comments || '',
           comments: newRecord.comments || '',
-          wave: newRecord.wave,
-          planTeam: newRecord.planTeam,
-          planGrp: newRecord.planGrp,
-          project: newRecord.project,
-          nodesCount: formattedRecord.nodesCount,
-          attachmentName: newRecord.attachment,
-          l1PhysicalFlow: newRecord.l1PhysicalFlow,
-          l1FinancialFlow: newRecord.l1FinancialFlow
+          SKU_Count: newRecord.skuCount !== undefined && newRecord.skuCount !== '' ? Number(newRecord.skuCount) : 0,
+          skuCount: newRecord.skuCount !== undefined && newRecord.skuCount !== '' ? Number(newRecord.skuCount) : 0,
+          Sales_Vol: newRecord.salesVol || '',
+          salesVol: newRecord.salesVol || '',
+          Tranactions_Vol: newRecord.transactionsVol || '',
+          transactionsVol: newRecord.transactionsVol || '',
+          OMP_relevant: apsValue,
+          ompRelevant: apsValue,
+          apsRelevant: apsValue,
+          LEGO: newRecord.lego || '',
+          lego: newRecord.lego || '',
+          Returns: newRecord.returns || '',
+          returns: newRecord.returns || '',
+          Physical_flow: newRecord.physicalFlow || '',
+          physicalFlow: newRecord.physicalFlow || '',
+          Financial_flow: newRecord.financialFlow || '',
+          financialFlow: newRecord.financialFlow || '',
+          Description: newRecord.description || '',
+          description: newRecord.description || '',
+          File_link: newRecord.fileLink || '',
+          fileLink: newRecord.fileLink || '',
+          prj_arch_ID: newRecord.prjArchId || '',
+          prjArchId: newRecord.prjArchId || '',
+          Documentation: newRecord.documentation || '',
+          documentation: newRecord.documentation || '',
+          Status: newRecord.status || '00-New',
+          status: newRecord.status || '00-New'
         })
       });
-    } catch (err) {
-      console.log('Backend notification: Data saved to browser view (database sync pending network):', err.message);
-    }
 
-    setModalState({
-      isOpen: true,
-      title: createMode === 'clone' ? 'Archetype Cloned Successfully' : 'Archetype Created Successfully',
-      message: `Lane "${laneValue}" (${codeValue}) has been successfully saved into Lane Header and added to the table!`
-    });
+      const resData = await res.json().catch(() => ({}));
+
+      if (!res.ok || resData.success === false) {
+        const detail = resData.error ? `\n\nDetails: ${resData.error}` : '';
+        const errorMsg = (resData.message || `Server error (${res.status})`) + detail;
+        console.error('Backend save error:', errorMsg, resData);
+        setModalState({
+          isOpen: true,
+          title: 'Save Failed',
+          message: errorMsg
+        });
+        return;
+      }
+
+      // Refresh data from database
+      await fetchArchetypes();
+      setCurrentView('list');
+      window.history.pushState({ view: 'list' }, '', window.location.pathname);
+
+      setModalState({
+        isOpen: true,
+        title: createMode === 'clone' ? 'Archetype Cloned Successfully' : 'Archetype Created Successfully',
+        message: `Lane "${laneValue || codeValue}" (${codeValue}) has been successfully saved into Lane Header and added to the table!`
+      });
+    } catch (err) {
+      console.warn('Backend connection failed:', err.message);
+      // Fallback if backend service is completely unreachable
+      setAllArchetypes((prev) => [formattedRecord, ...prev]);
+      setCurrentView('list');
+      window.history.pushState({ view: 'list' }, '', window.location.pathname);
+      setModalState({
+        isOpen: true,
+        title: createMode === 'clone' ? 'Archetype Cloned (Local View)' : 'Archetype Created (Local View)',
+        message: `Saved to browser view. Server note: ${err.message}`
+      });
+    }
   };
 
   // Handle Update from ArchetypeDetail edit view
   const handleUpdateArchetype = async (originalId, updatedRecord) => {
-    const newArchId = (updatedRecord.archetypeId || originalId).trim();
-    const newCsclId = (updatedRecord.csclLaneId || '').trim();
-    const descValue = (updatedRecord.shortDescription || '').trim();
-    const legalEntitiesValue = (updatedRecord.legalEntities || '').trim();
+    const newArchId = (updatedRecord.archetypeId || updatedRecord.archtId || originalId).trim();
+    const newCsclId = (updatedRecord.csclLaneId || updatedRecord.laneId || '').trim();
+    const descValue = (updatedRecord.shortDesc || updatedRecord.shortDescription || '').trim();
+    const projectValue = (updatedRecord.transcendPrj || updatedRecord.project || '').trim();
+    const apsValue = (updatedRecord.ompRelevant || updatedRecord.apsRelevant || '').trim();
 
     // 1. Persist to Express backend / Azure SQL
     const res = await fetch(`http://localhost:5000/api/lane-headers/${encodeURIComponent(originalId)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        ...updatedRecord,
+        ARCHT_ID: newArchId,
         archetypeId: newArchId,
+        CSCL_Lane_ID: newCsclId,
         csclLaneId: newCsclId,
+        Short_desc: descValue,
+        shortDesc: descValue,
         shortDescription: descValue,
-        legalEntities: legalEntitiesValue,
-        status: updatedRecord.status || 'Draft',
+        Owner: updatedRecord.owner,
         owner: updatedRecord.owner,
-        ownerRole: updatedRecord.ownerRole || '',
-        franchise: updatedRecord.franchise || '',
-        comments: updatedRecord.comments || '',
+        Owner_role: updatedRecord.ownerRole,
+        ownerRole: updatedRecord.ownerRole,
+        Wave: updatedRecord.wave,
         wave: updatedRecord.wave,
-        planTeam: updatedRecord.planTeam,
+        Prev_Wave_CSCL_ID: updatedRecord.prevWaveCsclId,
+        prevWaveCsclId: updatedRecord.prevWaveCsclId,
+        Nodes: typeof updatedRecord.nodesCount === 'string' ? updatedRecord.nodesCount : (Array.isArray(updatedRecord.nodes) ? `${updatedRecord.nodes.length} nodes defined` : '0 nodes defined'),
+        nodesCount: typeof updatedRecord.nodesCount === 'string' ? updatedRecord.nodesCount : (Array.isArray(updatedRecord.nodes) ? `${updatedRecord.nodes.length} nodes defined` : '0 nodes defined'),
+        Plan_GRP: updatedRecord.planGrp,
         planGrp: updatedRecord.planGrp,
-        project: updatedRecord.project,
-        nodesCount: updatedRecord.nodesCount || `${updatedRecord.nodes?.length || 0} nodes defined`,
-        attachmentName: updatedRecord.attachmentName || updatedRecord.attachment,
-        l1PhysicalFlow: updatedRecord.l1PhysicalFlow,
-        l1FinancialFlow: updatedRecord.l1FinancialFlow
+        Franchise: updatedRecord.franchise,
+        franchise: updatedRecord.franchise,
+        PLAN_team: updatedRecord.planTeam,
+        planTeam: updatedRecord.planTeam,
+        TranSCend_PRJ: projectValue,
+        project: projectValue,
+        transcendPrj: projectValue,
+        Comments: updatedRecord.comments,
+        comments: updatedRecord.comments,
+        SKU_Count: updatedRecord.skuCount !== undefined && updatedRecord.skuCount !== '' ? Number(updatedRecord.skuCount) : 0,
+        skuCount: updatedRecord.skuCount !== undefined && updatedRecord.skuCount !== '' ? Number(updatedRecord.skuCount) : 0,
+        Sales_Vol: updatedRecord.salesVol,
+        salesVol: updatedRecord.salesVol,
+        Tranactions_Vol: updatedRecord.transactionsVol,
+        transactionsVol: updatedRecord.transactionsVol,
+        OMP_relevant: apsValue,
+        ompRelevant: apsValue,
+        apsRelevant: apsValue,
+        LEGO: updatedRecord.lego,
+        lego: updatedRecord.lego,
+        Returns: updatedRecord.returns,
+        returns: updatedRecord.returns,
+        Physical_flow: updatedRecord.physicalFlow,
+        physicalFlow: updatedRecord.physicalFlow,
+        Financial_flow: updatedRecord.financialFlow,
+        financialFlow: updatedRecord.financialFlow,
+        Description: updatedRecord.description,
+        description: updatedRecord.description,
+        File_link: updatedRecord.fileLink,
+        fileLink: updatedRecord.fileLink,
+        prj_arch_ID: updatedRecord.prjArchId,
+        prjArchId: updatedRecord.prjArchId,
+        Documentation: updatedRecord.documentation,
+        documentation: updatedRecord.documentation,
+        Status: updatedRecord.status || '00-New',
+        status: updatedRecord.status || '00-New'
       })
     });
 
-    const json = await res.json();
+    const json = await res.json().catch(() => ({}));
     if (!res.ok || !json.success) {
-      throw new Error(json.message || 'Failed to update archetype in database');
+      const detail = json.error ? `: ${json.error}` : '';
+      throw new Error((json.message || 'Failed to update archetype in database') + detail);
     }
 
-    const hasVisio = Boolean((updatedRecord.attachmentName || updatedRecord.attachment || '').trim());
+    // Refresh database state
+    fetchArchetypes();
+
+    const hasVisio = Boolean((updatedRecord.fileLink || updatedRecord.attachmentName || updatedRecord.attachment || '').trim());
     const visioStatus = hasVisio ? 'Approval In Progress' : 'Not Uploaded';
     const visioClass = hasVisio ? 'in-progress' : 'not-uploaded';
 
     // 2. Update local state in allArchetypes
     setAllArchetypes((prev) =>
       prev.map((item) => {
-        const itemId = item.archetypeId || item.code || item.id;
+        const itemId = item.archetypeId || item.archtId || item.code || item.id;
         if (itemId === originalId) {
           return {
             ...item,
             ...updatedRecord,
             id: newArchId,
             archetypeId: newArchId,
+            archtId: newArchId,
             code: newArchId,
             codeLines: newArchId.includes('-') ? newArchId.split('-') : [newArchId],
             csclLaneId: newCsclId,
             laneId: newCsclId,
-            description: descValue,
+            shortDesc: descValue,
             shortDescription: descValue,
-            legalEntities: legalEntitiesValue,
+            description: updatedRecord.description || descValue,
             status: updatedRecord.status,
             pfcStatus: updatedRecord.status,
             pfcStatusClass: updatedRecord.status === 'Approved' ? 'status-dot-approved' : (updatedRecord.status === 'In Review' ? 'status-dot-review' : 'status-dot-new'),
             visioStatus,
             visioClass,
             updatedBy: updatedRecord.owner,
+            owner: updatedRecord.owner,
             ownerRole: updatedRecord.ownerRole || '',
             franchise: updatedRecord.franchise || '',
+            wave: updatedRecord.wave || '',
+            prevWaveCsclId: updatedRecord.prevWaveCsclId || '',
+            planGrp: updatedRecord.planGrp || '',
+            planTeam: updatedRecord.planTeam || '',
+            project: projectValue,
+            transcendPrj: projectValue,
             comments: updatedRecord.comments || '',
-            lastUpdate: new Date().toISOString().slice(0, 10).replace(/-/g, '/')
+            skuCount: updatedRecord.skuCount !== undefined ? Number(updatedRecord.skuCount) : 0,
+            salesVol: updatedRecord.salesVol || '',
+            transactionsVol: updatedRecord.transactionsVol || '',
+            apsRelevant: apsValue,
+            ompRelevant: apsValue,
+            lego: updatedRecord.lego || '',
+            returns: updatedRecord.returns || '',
+            physicalFlow: updatedRecord.physicalFlow || '',
+            financialFlow: updatedRecord.financialFlow || '',
+            fileLink: updatedRecord.fileLink || '',
+            prjArchId: updatedRecord.prjArchId || '',
+            documentation: updatedRecord.documentation || '',
+            lastUpdate: new Date().toISOString().slice(0, 10)
           };
         }
         return item;
@@ -326,23 +589,43 @@ export default function App() {
       ...updatedRecord,
       id: newArchId,
       archetypeId: newArchId,
+      archtId: newArchId,
       code: newArchId,
       codeLines: newArchId.includes('-') ? newArchId.split('-') : [newArchId],
       csclLaneId: newCsclId,
       laneId: newCsclId,
-      description: descValue,
+      shortDesc: descValue,
       shortDescription: descValue,
-      legalEntities: legalEntitiesValue,
+      description: updatedRecord.description || descValue,
       status: updatedRecord.status,
       pfcStatus: updatedRecord.status,
       pfcStatusClass: updatedRecord.status === 'Approved' ? 'status-dot-approved' : (updatedRecord.status === 'In Review' ? 'status-dot-review' : 'status-dot-new'),
       visioStatus,
       visioClass,
       updatedBy: updatedRecord.owner,
+      owner: updatedRecord.owner,
       ownerRole: updatedRecord.ownerRole || '',
       franchise: updatedRecord.franchise || '',
+      wave: updatedRecord.wave || '',
+      prevWaveCsclId: updatedRecord.prevWaveCsclId || '',
+      planGrp: updatedRecord.planGrp || '',
+      planTeam: updatedRecord.planTeam || '',
+      project: projectValue,
+      transcendPrj: projectValue,
       comments: updatedRecord.comments || '',
-      lastUpdate: new Date().toISOString().slice(0, 10).replace(/-/g, '/')
+      skuCount: updatedRecord.skuCount !== undefined ? Number(updatedRecord.skuCount) : 0,
+      salesVol: updatedRecord.salesVol || '',
+      transactionsVol: updatedRecord.transactionsVol || '',
+      apsRelevant: apsValue,
+      ompRelevant: apsValue,
+      lego: updatedRecord.lego || '',
+      returns: updatedRecord.returns || '',
+      physicalFlow: updatedRecord.physicalFlow || '',
+      financialFlow: updatedRecord.financialFlow || '',
+      fileLink: updatedRecord.fileLink || '',
+      prjArchId: updatedRecord.prjArchId || '',
+      documentation: updatedRecord.documentation || '',
+      lastUpdate: new Date().toISOString().slice(0, 10)
     }));
 
     setModalState({
@@ -383,7 +666,11 @@ export default function App() {
           activeTab={activeTab}
           setActiveTab={(tab) => {
             setActiveTab(tab);
-            setCurrentView('list');
+            if (currentView !== 'list') {
+              setCurrentView('list');
+              setSelectedArchetype(null);
+              window.history.pushState({ view: 'list', tab }, '', window.location.pathname);
+            }
           }}
         />
 
@@ -394,14 +681,14 @@ export default function App() {
               mode={createMode}
               referenceData={referenceArchetype || allArchetypes[0]}
               existingArchetypes={allArchetypes}
-              onBack={() => setCurrentView('list')}
+              onBack={handleInAppBack}
               onSave={handleSaveArchetype}
             />
           ) : currentView === 'detail' ? (
             <ArchetypeDetail
               archetype={selectedArchetype || allArchetypes[0]}
               allArchetypes={allArchetypes}
-              onBack={() => setCurrentView('list')}
+              onBack={handleInAppBack}
               onSaveEdit={handleUpdateArchetype}
             />
           ) : (

@@ -1,81 +1,127 @@
 import { getDbPool, sql } from '../config/db.js';
-import { insertRecord, updateRecord } from '../services/dbHelper.js';
+import { insertRecord, updateRecord, getTableColumns, clearColumnsCache } from '../services/dbHelper.js';
+import { schemaManager } from '../services/schemaManager.js';
 
 const SCHEMA = process.env.DB_SCHEMA || 'archetype';
+
+// Ensure table exists on the fly (auto-heals if dropped)
+async function ensureTableReady() {
+  try {
+    const exists = await schemaManager.tableExists('lane_headers', SCHEMA);
+    if (!exists) {
+      console.log(`[laneHeaderController] Table [${SCHEMA}].[lane_headers] missing. Auto-creating table...`);
+      await schemaManager.syncSchema();
+      clearColumnsCache();
+    }
+  } catch (err) {
+    console.warn('[laneHeaderController] Table readiness check warning:', err.message);
+  }
+}
+
+// Helper to ensure Nodes column always receives a clean string
+function formatNodesValue(body) {
+  if (typeof body.Nodes === 'string' && body.Nodes.trim()) return body.Nodes.trim();
+  if (typeof body.nodesCount === 'string' && body.nodesCount.trim()) return body.nodesCount.trim();
+  if (typeof body.nodes === 'string' && body.nodes.trim()) return body.nodes.trim();
+  if (Array.isArray(body.nodes)) return `${body.nodes.length} nodes defined`;
+  return '0 nodes defined';
+}
+
+// Helper to map DB record to frontend model
+function mapLaneHeaderRow(row) {
+  const codeId = row.ARCHT_ID || row.archetype_id || '';
+  const laneId = row.CSCL_Lane_ID || row.cscl_lane_id || '';
+  const status = row.Status || row.status || '00-New';
+  const owner = row.Owner || row.owner_email || '';
+  const shortDesc = row.Short_desc || row.short_description || '';
+  const franchise = row.Franchise || row.franchise || '';
+  const ownerRole = row.Owner_role || row.owner_role || '';
+  const wave = row.Wave || row.wave || '';
+  const prevWaveCsclId = row.Prev_Wave_CSCL_ID || row.prev_wave_cscl_id || '';
+  const nodes = row.Nodes || row.nodes_count || '0 nodes defined';
+  const planGrp = row.Plan_GRP || row.plan_grp || '';
+  const planTeam = row.PLAN_team || row.plan_team || '';
+  const project = row.TranSCend_PRJ || row.project || '';
+  const comments = row.Comments || row.comments || '';
+  const skuCount = row.SKU_Count !== undefined && row.SKU_Count !== null ? row.SKU_Count : (row.sku_count || 0);
+  const salesVol = row.Sales_Vol || row.sales_vol || '';
+  const transactionsVol = row.Tranactions_Vol || row.transactions_vol || '';
+  const apsRelevant = row.OMP_relevant || row.omp_relevant || '';
+  const lego = row.LEGO || row.lego || '';
+  const returns = row.Returns || row.returns || '';
+  const physicalFlow = row.Physical_flow || row.l1_physical_flow || '';
+  const financialFlow = row.Financial_flow || row.l1_financial_flow || '';
+  const description = row.Description || row.description || '';
+  const fileLink = row.File_link || row.file_link || '';
+  const prjArchId = row.prj_arch_ID || row.prj_arch_id || '';
+  const documentation = row.Documentation || row.documentation || '';
+  const createdAt = row.created_at;
+  const updatedAt = row.updated_at;
+
+  return {
+    id: codeId,
+    archetypeId: codeId,
+    archtId: codeId,
+    csclLaneId: laneId,
+    laneId: laneId,
+    code: codeId,
+    codeLines: codeId.includes('-') ? codeId.split('-') : [codeId],
+    shortDesc,
+    shortDescription: shortDesc,
+    ownerRole,
+    owner,
+    ownerEmail: owner,
+    updatedBy: owner,
+    status,
+    pfcStatus: status,
+    pfcStatusClass: status === 'Approved' ? 'status-dot-approved' : (status === 'In Review' ? 'status-dot-review' : 'status-dot-new'),
+    wave,
+    prevWaveCsclId,
+    nodes: [],
+    nodesCount: nodes,
+    counters: [],
+    planGrp,
+    franchise,
+    planTeam,
+    project,
+    transcendPrj: project,
+    comments,
+    skuCount,
+    salesVol,
+    transactionsVol,
+    apsRelevant,
+    ompRelevant: apsRelevant,
+    lego,
+    returns,
+    physicalFlow,
+    financialFlow,
+    description,
+    fileLink,
+    prjArchId,
+    documentation,
+    visioStatus: row.visio_status || (fileLink ? 'Approval In Progress' : 'Not Uploaded'),
+    attachmentName: fileLink || row.attachment_name || '',
+    approvals: {
+      approved: row.approvals_approved ?? (fileLink ? 1 : 0),
+      total: row.approvals_total ?? 3,
+      steps: fileLink ? ['approved', 'pending', 'pending'] : ['pending', 'pending', 'pending']
+    },
+    lastUpdate: new Date(updatedAt || createdAt || Date.now()).toISOString().slice(0, 10)
+  };
+}
 
 // GET all lane headers
 export const getAllLaneHeaders = async (req, res) => {
   try {
+    await ensureTableReady();
     const pool = await getDbPool();
     const result = await pool.request().query(`
-      SELECT 
-        archetype_id,
-        cscl_lane_id,
-        legal_entities,
-        status,
-        owner_email,
-        wave,
-        short_description,
-        plan_team,
-        plan_grp,
-        project,
-        nodes_count,
-        attachment_name,
-        visio_status,
-        approvals_approved,
-        approvals_total,
-        l1_physical_flow,
-        l1_financial_flow,
-        franchise,
-        owner_role,
-        comments,
-        created_at,
-        updated_at
+      SELECT *
       FROM [${SCHEMA}].[lane_headers]
       ORDER BY created_at DESC
     `);
 
-    // Map database columns to camelCase for the frontend
-    const mappedData = result.recordset.map((row) => {
-      const codeId = row.archetype_id;
-      return {
-        id: codeId,
-        archetypeId: codeId,
-        csclLaneId: row.cscl_lane_id,
-        laneId: row.cscl_lane_id,
-        code: codeId,
-        codeLines: codeId.includes('-') ? codeId.split('-') : [codeId],
-        shortDescription: row.short_description || '',
-        description: row.short_description || '',
-        legalEntities: row.legal_entities || '',
-        status: row.status,
-        pfcStatus: row.status,
-        pfcStatusClass: row.status === 'Approved' ? 'status-dot-approved' : (row.status === 'In Review' ? 'status-dot-review' : 'status-dot-new'),
-        owner: row.owner_email,
-        ownerEmail: row.owner_email,
-        updatedBy: row.owner_email,
-        wave: row.wave,
-        planTeam: row.plan_team,
-        planGrp: row.plan_grp,
-        project: row.project,
-        nodesCount: row.nodes_count,
-        attachmentName: row.attachment_name,
-        attachment: row.attachment_name,
-        visioStatus: row.visio_status || (row.attachment_name ? 'Approval In Progress' : 'Not Uploaded'),
-        visioClass: (row.visio_status || (row.attachment_name ? 'Approval In Progress' : 'Not Uploaded')).toLowerCase().replace(/\s+/g, '-'),
-        approvals: {
-          approved: row.approvals_approved ?? (row.attachment_name ? 1 : 0),
-          total: row.approvals_total ?? 3,
-          steps: row.attachment_name ? ['approved', 'pending', 'pending'] : ['pending', 'pending', 'pending']
-        },
-        l1PhysicalFlow: row.l1_physical_flow,
-        l1FinancialFlow: row.l1_financial_flow,
-        franchise: row.franchise || '',
-        ownerRole: row.owner_role || '',
-        comments: row.comments || '',
-        lastUpdate: new Date(row.updated_at || row.created_at).toISOString().slice(0, 10).replace(/-/g, '/')
-      };
-    });
+    const mappedData = result.recordset.map(mapLaneHeaderRow);
 
     res.json({
       success: true,
@@ -96,13 +142,14 @@ export const getAllLaneHeaders = async (req, res) => {
 export const getLaneHeaderById = async (req, res) => {
   const { id } = req.params;
   try {
+    await ensureTableReady();
     const pool = await getDbPool();
     const result = await pool.request()
       .input('id', sql.VarChar(50), id)
       .query(`
         SELECT TOP 1 *
         FROM [${SCHEMA}].[lane_headers]
-        WHERE archetype_id = @id OR cscl_lane_id = @id
+        WHERE ARCHT_ID = @id OR CSCL_Lane_ID = @id
       `);
 
     if (result.recordset.length === 0) {
@@ -112,42 +159,9 @@ export const getLaneHeaderById = async (req, res) => {
       });
     }
 
-    const row = result.recordset[0];
-    const codeId = row.archetype_id;
     res.json({
       success: true,
-      data: {
-        id: codeId,
-        archetypeId: codeId,
-        csclLaneId: row.cscl_lane_id,
-        laneId: row.cscl_lane_id,
-        code: codeId,
-        codeLines: codeId.includes('-') ? codeId.split('-') : [codeId],
-        shortDescription: row.short_description || '',
-        description: row.short_description || '',
-        legalEntities: row.legal_entities || '',
-        status: row.status,
-        pfcStatus: row.status,
-        owner: row.owner_email,
-        ownerEmail: row.owner_email,
-        wave: row.wave,
-        planTeam: row.plan_team,
-        planGrp: row.plan_grp,
-        project: row.project,
-        nodesCount: row.nodes_count,
-        attachmentName: row.attachment_name,
-        visioStatus: row.visio_status || (row.attachment_name ? 'Approval In Progress' : 'Not Uploaded'),
-        approvals: {
-          approved: row.approvals_approved ?? (row.attachment_name ? 1 : 0),
-          total: row.approvals_total ?? 3
-        },
-        l1PhysicalFlow: row.l1_physical_flow,
-        l1FinancialFlow: row.l1_financial_flow,
-        franchise: row.franchise || '',
-        ownerRole: row.owner_role || '',
-        comments: row.comments || '',
-        lastUpdate: new Date(row.updated_at || row.created_at).toISOString().slice(0, 10).replace(/-/g, '/')
-      }
+      data: mapLaneHeaderRow(result.recordset[0])
     });
   } catch (error) {
     console.error('Error fetching lane header by ID:', error);
@@ -161,79 +175,96 @@ export const getLaneHeaderById = async (req, res) => {
 
 // CREATE new lane header
 export const createLaneHeader = async (req, res) => {
-  const {
-    archetypeId,
-    csclLaneId,
-    legalEntities,
-    status = 'Draft',
-    owner,
-    wave,
-    shortDescription,
-    planTeam,
-    planGrp,
-    project,
-    nodesCount = '0 nodes defined',
-    attachmentName,
-    l1PhysicalFlow,
-    l1FinancialFlow,
-    franchise,
-    ownerRole,
-    comments
-  } = req.body;
+  const b = req.body;
+  const archId = (b.ARCHT_ID || b.archetypeId || b.archtId || '').trim();
+  const csclId = (b.CSCL_Lane_ID || b.csclLaneId || b.laneId || '').trim();
+  const ownerVal = (b.Owner || b.owner || b.ownerEmail || '').trim();
 
-  // Mandatory fields: archetypeId, csclLaneId, owner
-  if (!archetypeId?.trim() || !csclLaneId?.trim() || !owner?.trim()) {
+  // Mandatory fields: Archetype ID and CSCL Lane ID
+  if (!archId || !csclId) {
     return res.status(400).json({
       success: false,
-      message: 'Archetype ID, CSCL Lane ID, and Owner are required fields.'
+      message: 'Archetype ID and CSCL Lane ID are required fields.'
     });
   }
 
-  // Determine visio status & approvals based on attachment
-  const hasVisio = attachmentName && attachmentName.trim().length > 0;
-  const visioStatus = hasVisio ? 'Approval In Progress' : 'Not Uploaded';
-  const approvalsApproved = hasVisio ? 1 : 0;
-  const approvalsTotal = 3;
+  const rawSku = b.SKU_Count !== undefined ? b.SKU_Count : b.skuCount;
+  const skuNum = rawSku !== undefined && rawSku !== null && rawSku !== '' ? Number(rawSku) : 0;
+  const skuCount = isNaN(skuNum) ? 0 : skuNum;
 
   try {
+    await ensureTableReady();
+    const pool = await getDbPool();
+    const cols = await getTableColumns('lane_headers', SCHEMA);
+    const colNames = cols.map((c) => c.columnName.toLowerCase());
+    const archCol = colNames.includes('archetype_id') ? 'archetype_id' : 'ARCHT_ID';
+    const csclCol = colNames.includes('cscl_lane_id')
+      ? (cols.find((c) => c.columnName.toLowerCase() === 'cscl_lane_id')?.columnName || 'CSCL_Lane_ID')
+      : 'CSCL_Lane_ID';
+
+    // Uniqueness validation for new Archetype
+    const duplicateCheck = await pool.request()
+      .input('archId', sql.VarChar(50), archId)
+      .input('csclId', sql.VarChar(50), csclId)
+      .query(`
+        SELECT [${archCol}] AS archId, [${csclCol}] AS csclId
+        FROM [${SCHEMA}].[lane_headers]
+        WHERE UPPER([${archCol}]) = UPPER(@archId) OR UPPER([${csclCol}]) = UPPER(@csclId)
+      `);
+
+    if (duplicateCheck.recordset.length > 0) {
+      const existing = duplicateCheck.recordset[0];
+      if (existing.archId?.toUpperCase() === archId.toUpperCase()) {
+        return res.status(409).json({
+          success: false,
+          message: `Archetype ID "${archId}" already exists.`
+        });
+      }
+      if (existing.csclId?.toUpperCase() === csclId.toUpperCase()) {
+        return res.status(409).json({
+          success: false,
+          message: `CSCL Lane ID "${csclId}" already exists.`
+        });
+      }
+    }
+
     await insertRecord('lane_headers', {
-      archetype_id: archetypeId.trim(),
-      cscl_lane_id: csclLaneId.trim(),
-      legal_entities: legalEntities ? legalEntities.trim() : null,
-      status: status || 'Draft',
-      owner_email: owner.trim(),
-      wave: wave || null,
-      short_description: shortDescription ? shortDescription.trim() : null,
-      plan_team: planTeam || null,
-      plan_grp: planGrp || null,
-      project: project || null,
-      nodes_count: nodesCount || '0 nodes defined',
-      attachment_name: attachmentName || null,
-      visio_status: visioStatus,
-      approvals_approved: approvalsApproved,
-      approvals_total: approvalsTotal,
-      l1_physical_flow: l1PhysicalFlow || null,
-      l1_financial_flow: l1FinancialFlow || null,
-      franchise: franchise ? franchise.trim() : null,
-      owner_role: ownerRole ? ownerRole.trim() : null,
-      comments: comments ? comments.trim() : null
-    });
+      ARCHT_ID: archId,
+      Short_desc: b.Short_desc || b.shortDesc || b.shortDescription || null,
+      Owner_role: b.Owner_role || b.ownerRole || null,
+      Owner: ownerVal || null,
+      CSCL_Lane_ID: csclId,
+      Status: b.Status || b.status || '00-New',
+      Wave: b.Wave || b.wave || null,
+      Prev_Wave_CSCL_ID: b.Prev_Wave_CSCL_ID || b.prevWaveCsclId || null,
+      Nodes: formatNodesValue(b),
+      Plan_GRP: b.Plan_GRP || b.planGrp || null,
+      Franchise: b.Franchise || b.franchise || null,
+      PLAN_team: b.PLAN_team || b.planTeam || null,
+      TranSCend_PRJ: b.TranSCend_PRJ || b.project || b.transcendPrj || null,
+      Comments: b.Comments || b.comments || null,
+      SKU_Count: skuCount,
+      Sales_Vol: b.Sales_Vol || b.salesVol || null,
+      Tranactions_Vol: b.Tranactions_Vol || b.transactionsVol || null,
+      OMP_relevant: b.OMP_relevant || b.ompRelevant || b.apsRelevant || null,
+      LEGO: b.LEGO || b.lego || null,
+      Returns: b.Returns || b.returns || null,
+      Physical_flow: b.Physical_flow || b.physicalFlow || null,
+      Financial_flow: b.Financial_flow || b.financialFlow || null,
+      Description: b.Description || b.description || null,
+      File_link: b.File_link || b.fileLink || null,
+      prj_arch_ID: b.prj_arch_ID || b.prjArchId || null,
+      Documentation: b.Documentation || b.documentation || null
+    }, SCHEMA);
 
     res.status(201).json({
       success: true,
       message: 'Lane header created successfully',
       data: {
-        id: archetypeId.trim(),
-        archetypeId: archetypeId.trim(),
-        csclLaneId: csclLaneId.trim(),
-        shortDescription: shortDescription ? shortDescription.trim() : '',
-        legalEntities: legalEntities ? legalEntities.trim() : '',
-        status,
-        visioStatus,
-        owner: owner.trim(),
-        franchise: franchise ? franchise.trim() : '',
-        ownerRole: ownerRole ? ownerRole.trim() : '',
-        comments: comments ? comments.trim() : ''
+        id: archId,
+        archetypeId: archId,
+        csclLaneId: csclId,
+        owner: ownerVal
       }
     });
   } catch (error) {
@@ -248,90 +279,93 @@ export const createLaneHeader = async (req, res) => {
 
 // UPDATE lane header
 export const updateLaneHeader = async (req, res) => {
-  const { id } = req.params; // Original archetype_id
-  const {
-    archetypeId,
-    csclLaneId,
-    legalEntities,
-    status,
-    owner,
-    wave,
-    shortDescription,
-    planTeam,
-    planGrp,
-    project,
-    nodesCount,
-    attachmentName,
-    l1PhysicalFlow,
-    l1FinancialFlow,
-    franchise,
-    ownerRole,
-    comments
-  } = req.body;
+  const { id } = req.params; // Original ARCHT_ID
+  const b = req.body;
+  const targetArchId = (b.ARCHT_ID || b.archetypeId || b.archtId || id).trim();
+  const targetCsclId = (b.CSCL_Lane_ID || b.csclLaneId || b.laneId || '').trim();
+  const ownerVal = (b.Owner || b.owner || b.ownerEmail || '').trim();
 
-  const targetArchId = (archetypeId || id).trim();
-  const targetCsclId = csclLaneId?.trim();
-
-  // Mandatory checks
-  if (!targetArchId || !targetCsclId || !owner?.trim()) {
+  // Mandatory fields: Archetype ID and CSCL Lane ID
+  if (!targetArchId || !targetCsclId) {
     return res.status(400).json({
       success: false,
-      message: 'Archetype ID, CSCL Lane ID, and Owner are required fields.'
+      message: 'Archetype ID and CSCL Lane ID are required fields.'
     });
   }
 
   try {
+    await ensureTableReady();
     const pool = await getDbPool();
+    const cols = await getTableColumns('lane_headers', SCHEMA);
+    const colNames = cols.map((c) => c.columnName.toLowerCase());
+    const archCol = colNames.includes('archetype_id') ? 'archetype_id' : 'ARCHT_ID';
+    const csclCol = colNames.includes('cscl_lane_id')
+      ? (cols.find((c) => c.columnName.toLowerCase() === 'cscl_lane_id')?.columnName || 'CSCL_Lane_ID')
+      : 'CSCL_Lane_ID';
 
-    // 1. Uniqueness check: ensure new archetypeId or csclLaneId does not conflict with another existing record
+    // Uniqueness check across other archetypes
     const duplicateCheck = await pool.request()
-      .input('original_id', sql.VarChar(50), id)
       .input('target_arch_id', sql.VarChar(50), targetArchId)
       .input('target_cscl_id', sql.VarChar(50), targetCsclId)
+      .input('original_id', sql.VarChar(50), id)
       .query(`
-        SELECT archetype_id, cscl_lane_id 
+        SELECT [${archCol}] AS archId, [${csclCol}] AS csclId
         FROM [${SCHEMA}].[lane_headers]
-        WHERE (archetype_id = @target_arch_id OR cscl_lane_id = @target_cscl_id)
-        AND archetype_id != @original_id
+        WHERE UPPER([${archCol}]) != UPPER(@original_id)
+          AND (UPPER([${archCol}]) = UPPER(@target_arch_id) OR UPPER([${csclCol}]) = UPPER(@target_cscl_id))
       `);
 
     if (duplicateCheck.recordset.length > 0) {
-      const match = duplicateCheck.recordset[0];
-      const conflictMsg = match.archetype_id.toUpperCase() === targetArchId.toUpperCase() 
-        ? `Archetype ID "${targetArchId}" already exists in another record.` 
-        : `CSCL Lane ID "${targetCsclId}" already exists in another record.`;
-      return res.status(409).json({
-        success: false,
-        message: conflictMsg
-      });
+      const existing = duplicateCheck.recordset[0];
+      if (existing.archId?.toUpperCase() === targetArchId.toUpperCase()) {
+        return res.status(409).json({
+          success: false,
+          message: `Archetype ID "${targetArchId}" already exists.`
+        });
+      }
+      if (existing.csclId?.toUpperCase() === targetCsclId.toUpperCase()) {
+        return res.status(409).json({
+          success: false,
+          message: `CSCL Lane ID "${targetCsclId}" already exists.`
+        });
+      }
     }
 
-    const hasVisio = attachmentName && attachmentName.trim().length > 0;
-    const visioStatus = hasVisio ? 'Approval In Progress' : 'Not Uploaded';
+    const rawSku = b.SKU_Count !== undefined ? b.SKU_Count : b.skuCount;
+    const skuNum = rawSku !== undefined && rawSku !== null && rawSku !== '' ? Number(rawSku) : 0;
+    const skuCount = isNaN(skuNum) ? 0 : skuNum;
 
     await updateRecord('lane_headers', {
-      archetype_id: targetArchId,
-      cscl_lane_id: targetCsclId,
-      legal_entities: legalEntities ? legalEntities.trim() : null,
-      status: status || 'Draft',
-      owner_email: owner.trim(),
-      wave: wave || null,
-      short_description: shortDescription ? shortDescription.trim() : null,
-      plan_team: planTeam || null,
-      plan_grp: planGrp || null,
-      project: project || null,
-      nodes_count: nodesCount || '0 nodes defined',
-      attachment_name: attachmentName || null,
-      visio_status: visioStatus,
-      l1_physical_flow: l1PhysicalFlow || null,
-      l1_financial_flow: l1FinancialFlow || null,
-      franchise: franchise ? franchise.trim() : null,
-      owner_role: ownerRole ? ownerRole.trim() : null,
-      comments: comments ? comments.trim() : null,
+      ARCHT_ID: targetArchId,
+      Short_desc: b.Short_desc || b.shortDesc || b.shortDescription || null,
+      Owner_role: b.Owner_role || b.ownerRole || null,
+      Owner: ownerVal || null,
+      CSCL_Lane_ID: targetCsclId || null,
+      Status: b.Status || b.status || '00-New',
+      Wave: b.Wave || b.wave || null,
+      Prev_Wave_CSCL_ID: b.Prev_Wave_CSCL_ID || b.prevWaveCsclId || null,
+      Nodes: formatNodesValue(b),
+      Plan_GRP: b.Plan_GRP || b.planGrp || null,
+      Franchise: b.Franchise || b.franchise || null,
+      PLAN_team: b.PLAN_team || b.planTeam || null,
+      TranSCend_PRJ: b.TranSCend_PRJ || b.project || b.transcendPrj || null,
+      Comments: b.Comments || b.comments || null,
+      SKU_Count: skuCount,
+      Sales_Vol: b.Sales_Vol || b.salesVol || null,
+      Tranactions_Vol: b.Tranactions_Vol || b.transactionsVol || null,
+      OMP_relevant: b.OMP_relevant || b.ompRelevant || b.apsRelevant || null,
+      LEGO: b.LEGO || b.lego || null,
+      Returns: b.Returns || b.returns || null,
+      Physical_flow: b.Physical_flow || b.physicalFlow || null,
+      Financial_flow: b.Financial_flow || b.financialFlow || null,
+      Description: b.Description || b.description || null,
+      File_link: b.File_link || b.fileLink || null,
+      prj_arch_ID: b.prj_arch_ID || b.prjArchId || null,
+      Documentation: b.Documentation || b.documentation || null,
       updated_at: new Date()
     }, {
-      archetype_id: id
-    });
+      ARCHT_ID: id
+    }, SCHEMA);
 
     res.json({
       success: true,
@@ -339,15 +373,7 @@ export const updateLaneHeader = async (req, res) => {
       data: {
         id: targetArchId,
         archetypeId: targetArchId,
-        csclLaneId: targetCsclId,
-        shortDescription: shortDescription ? shortDescription.trim() : '',
-        legalEntities: legalEntities ? legalEntities.trim() : '',
-        status,
-        visioStatus,
-        owner: owner.trim(),
-        franchise: franchise ? franchise.trim() : '',
-        ownerRole: ownerRole ? ownerRole.trim() : '',
-        comments: comments ? comments.trim() : ''
+        csclLaneId: targetCsclId
       }
     });
   } catch (error) {

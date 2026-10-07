@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Search, Plus, Trash2, Edit2, Download, ChevronDown, Check, X } from 'lucide-react';
+import { ArrowLeft, Search, Plus, Trash2, Edit2, Download, ChevronDown, Check, X, FileText } from 'lucide-react';
 
 import {
   OWNER_ROLE_OPTIONS,
@@ -9,7 +9,14 @@ import {
   PATTERN_ID_OPTIONS,
   NODE_TYPE_OPTIONS,
   NODE_PURPOSE_OPTIONS,
-  INCO_TERM_OPTIONS
+  INCO_TERM_OPTIONS,
+  PLAN_GRP_OPTIONS,
+  PLAN_TEAM_OPTIONS,
+  PROJECT_OPTIONS,
+  APS_RELEVANT_OPTIONS,
+  RETURNS_OPTIONS,
+  PHYSICAL_FLOW_OPTIONS,
+  FINANCIAL_FLOW_OPTIONS
 } from '../data/lovData';
 
 export default function CreateArchetype({
@@ -23,31 +30,76 @@ export default function CreateArchetype({
   const refCode = referenceData?.code || referenceData?.archetypeId || referenceData?.id || 'Selected Archetype';
 
   // Form Fields State
-  const [formData, setFormData] = useState({
-    archetypeId: '',
-    csclLaneId: '',
-    status: 'Draft',
-    owner: '',
-    ownerRole: '',
-    franchise: '',
-    wave: '',
-    shortDescription: '',
-    legalEntities: '',
-    planTeam: '',
-    planGrp: '',
-    project: '',
-    nodesCount: '',
-    attachment: '',
-    l1PhysicalFlow: '',
-    l1FinancialFlow: '',
-    comments: ''
+  const [formData, setFormData] = useState(() => {
+    if (isClone && referenceData) {
+      return {
+        archetypeId: '',
+        shortDesc: '',
+        ownerRole: referenceData.ownerRole || '',
+        owner: referenceData.owner || referenceData.ownerEmail || '',
+        csclLaneId: '',
+        status: referenceData.status || referenceData.pfcStatus || '00-New',
+        wave: referenceData.wave || '',
+        prevWaveCsclId: '',
+        nodes: `${referenceData.nodes?.length || 0} nodes defined`,
+        planGrp: referenceData.planGrp || '',
+        franchise: referenceData.franchise || '',
+        planTeam: referenceData.planTeam || '',
+        transcendPrj: referenceData.transcendPrj || referenceData.project || '',
+        comments: referenceData.comments || '',
+        skuCount: referenceData.skuCount !== undefined && referenceData.skuCount !== null ? referenceData.skuCount : 0,
+        salesVol: referenceData.salesVol || '',
+        transactionsVol: referenceData.transactionsVol || '',
+        ompRelevant: referenceData.ompRelevant || referenceData.apsRelevant || '',
+        lego: referenceData.lego || '',
+        returns: referenceData.returns || '',
+        physicalFlow: referenceData.physicalFlow || referenceData.l1PhysicalFlow || '',
+        financialFlow: referenceData.financialFlow || referenceData.l1FinancialFlow || '',
+        description: referenceData.description || '',
+        fileLink: referenceData.fileLink || referenceData.attachmentName || '',
+        prjArchId: referenceData.prjArchId || '',
+        documentation: referenceData.documentation || ''
+      };
+    }
+    return {
+      archetypeId: '',
+      shortDesc: '',
+      ownerRole: '',
+      owner: '',
+      csclLaneId: '',
+      status: '00-New',
+      wave: '',
+      prevWaveCsclId: '',
+      nodes: '0 nodes defined',
+      planGrp: '',
+      franchise: '',
+      planTeam: '',
+      transcendPrj: '',
+      comments: '',
+      skuCount: 0,
+      salesVol: '',
+      transactionsVol: '',
+      ompRelevant: '',
+      lego: '',
+      returns: '',
+      physicalFlow: '',
+      financialFlow: '',
+      description: '',
+      fileLink: '',
+      prjArchId: '',
+      documentation: ''
+    };
   });
 
   // Counters State
-  const [counters, setCounters] = useState([]);
+  const [counters, setCounters] = useState(() => (
+    isClone && Array.isArray(referenceData?.counters) ? [...referenceData.counters] : []
+  ));
 
   // Nodes State
-  const [nodes, setNodes] = useState([]);
+  const [nodes, setNodes] = useState(() => (
+    isClone && Array.isArray(referenceData?.nodes) ? [...referenceData.nodes] : []
+  ));
 
   // Errors state
   const [errors, setErrors] = useState({});
@@ -80,26 +132,33 @@ export default function CreateArchetype({
   // Initialize data on mount or when mode/referenceData changes
   useEffect(() => {
     if (isClone && referenceData) {
-      // In Clone mode: Pre-fill all fields with whatever user had filled in the reference archetype
-      // but keep archetypeId and csclLaneId blank so the user must provide new unique IDs
       setFormData({
         archetypeId: '',
-        csclLaneId: '',
-        status: referenceData.status || referenceData.pfcStatus || 'Draft',
-        owner: referenceData.owner || referenceData.ownerEmail || '',
+        shortDesc: '',
         ownerRole: referenceData.ownerRole || '',
-        franchise: referenceData.franchise || '',
+        owner: referenceData.owner || referenceData.ownerEmail || '',
+        csclLaneId: '',
+        status: referenceData.status || referenceData.pfcStatus || '00-New',
         wave: referenceData.wave || '',
-        shortDescription: referenceData.shortDescription || referenceData.description || '',
-        legalEntities: referenceData.legalEntities || '',
-        planTeam: referenceData.planTeam || '',
+        prevWaveCsclId: '',
+        nodes: `${referenceData.nodes?.length || 0} nodes defined`,
         planGrp: referenceData.planGrp || '',
-        project: referenceData.project || '',
-        nodesCount: referenceData.nodesCount || (referenceData.nodes?.length ? `${referenceData.nodes.length} nodes defined` : ''),
-        attachment: referenceData.attachmentName || referenceData.attachment || '',
-        l1PhysicalFlow: referenceData.l1PhysicalFlow || '',
-        l1FinancialFlow: referenceData.l1FinancialFlow || '',
-        comments: referenceData.comments || ''
+        franchise: referenceData.franchise || '',
+        planTeam: referenceData.planTeam || '',
+        transcendPrj: referenceData.transcendPrj || referenceData.project || '',
+        comments: referenceData.comments || '',
+        skuCount: referenceData.skuCount !== undefined && referenceData.skuCount !== null ? referenceData.skuCount : 0,
+        salesVol: referenceData.salesVol || '',
+        transactionsVol: referenceData.transactionsVol || '',
+        ompRelevant: referenceData.ompRelevant || referenceData.apsRelevant || '',
+        lego: referenceData.lego || '',
+        returns: referenceData.returns || '',
+        physicalFlow: referenceData.physicalFlow || referenceData.l1PhysicalFlow || '',
+        financialFlow: referenceData.financialFlow || referenceData.l1FinancialFlow || '',
+        description: referenceData.description || '',
+        fileLink: referenceData.fileLink || referenceData.attachmentName || '',
+        prjArchId: referenceData.prjArchId || '',
+        documentation: referenceData.documentation || ''
       });
 
       // Copy actual counters and nodes (empty array if reference has none)
@@ -108,22 +167,31 @@ export default function CreateArchetype({
     } else {
       setFormData({
         archetypeId: '',
-        csclLaneId: '',
-        status: 'Draft',
-        owner: '',
+        shortDesc: '',
         ownerRole: '',
-        franchise: '',
+        owner: '',
+        csclLaneId: '',
+        status: '00-New',
         wave: '',
-        shortDescription: '',
-        legalEntities: '',
-        planTeam: '',
+        prevWaveCsclId: '',
+        nodes: '0 nodes defined',
         planGrp: '',
-        project: '',
-        nodesCount: '',
-        attachment: '',
-        l1PhysicalFlow: '',
-        l1FinancialFlow: '',
-        comments: ''
+        franchise: '',
+        planTeam: '',
+        transcendPrj: '',
+        comments: '',
+        skuCount: 0,
+        salesVol: '',
+        transactionsVol: '',
+        ompRelevant: '',
+        lego: '',
+        returns: '',
+        physicalFlow: '',
+        financialFlow: '',
+        description: '',
+        fileLink: '',
+        prjArchId: '',
+        documentation: ''
       });
       setCounters([]);
       setNodes([]);
@@ -132,31 +200,14 @@ export default function CreateArchetype({
   }, [isClone, referenceData]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (checked ? 'Not Applicable' : '') : value
+    }));
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: null }));
     }
-  };
-
-  // Helper to suggest unique IDs when cloning
-  const handleAutoSuggestUniqueIds = () => {
-    let randomNum = Math.floor(Math.random() * 9000) + 1000;
-    while (
-      existingArchetypes.some(
-        (a) =>
-          (a.code || a.archetypeId || a.id)?.toUpperCase() === `ARC-${randomNum}` ||
-          (a.laneId || a.csclLaneId)?.toUpperCase() === `CSCL-${randomNum}`
-      )
-    ) {
-      randomNum = Math.floor(Math.random() * 9000) + 1000;
-    }
-    setFormData((prev) => ({
-      ...prev,
-      archetypeId: `ARC-${randomNum}`,
-      csclLaneId: `CSCL-${randomNum}`
-    }));
-    setErrors((prev) => ({ ...prev, archetypeId: null, csclLaneId: null }));
   };
 
   // Handle Form Submission with Strict Uniqueness Validation
@@ -164,33 +215,35 @@ export default function CreateArchetype({
     e.preventDefault();
     const newErrors = {};
 
-    // Mandatory fields: Archetype ID, CSCL Lane ID, Owner
+    // Mandatory fields: Archetype ID and CSCL Lane ID
     if (!formData.archetypeId.trim()) {
       newErrors.archetypeId = 'Archetype ID is required';
     }
     if (!formData.csclLaneId.trim()) {
       newErrors.csclLaneId = 'CSCL Lane ID is required';
     }
-    if (!formData.owner.trim()) {
-      newErrors.owner = 'Owner is required';
-    }
 
     const targetArchId = formData.archetypeId.trim().toUpperCase();
     const targetCsclId = formData.csclLaneId.trim().toUpperCase();
 
-    // Check against any existing archetypes in database
-    const duplicateArchetype = existingArchetypes.find(
-      (a) => (a.code || a.archetypeId || a.id)?.trim().toUpperCase() === targetArchId
-    );
-    if (duplicateArchetype) {
-      newErrors.archetypeId = `Archetype ID "${formData.archetypeId.trim()}" already exists. Please enter a unique ID.`;
+    // Check Archetype ID uniqueness against existing archetypes
+    if (targetArchId) {
+      const duplicateArchetype = existingArchetypes.find(
+        (a) => (a.code || a.archetypeId || a.archtId || a.id)?.trim().toUpperCase() === targetArchId
+      );
+      if (duplicateArchetype) {
+        newErrors.archetypeId = `Archetype ID "${formData.archetypeId.trim()}" already exists. Please enter a unique ID.`;
+      }
     }
 
-    const duplicateLane = existingArchetypes.find(
-      (a) => (a.laneId || a.csclLaneId)?.trim().toUpperCase() === targetCsclId
-    );
-    if (duplicateLane) {
-      newErrors.csclLaneId = `CSCL Lane ID "${formData.csclLaneId.trim()}" already exists. Please enter a unique ID.`;
+    // Check CSCL Lane ID uniqueness against existing archetypes
+    if (targetCsclId) {
+      const duplicateLane = existingArchetypes.find(
+        (a) => (a.laneId || a.csclLaneId)?.trim().toUpperCase() === targetCsclId
+      );
+      if (duplicateLane) {
+        newErrors.csclLaneId = `CSCL Lane ID "${formData.csclLaneId.trim()}" already exists. Please enter a unique ID.`;
+      }
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -201,6 +254,10 @@ export default function CreateArchetype({
     if (onSave) {
       onSave({
         ...formData,
+        shortDescription: formData.shortDesc,
+        project: formData.transcendPrj,
+        apsRelevant: formData.ompRelevant,
+        nodesCount: `${nodes.length} nodes defined`,
         counters,
         nodes
       });
@@ -329,15 +386,8 @@ export default function CreateArchetype({
         <div className="clone-info-alert">
           <div className="clone-alert-text">
             <strong>Clone with Reference Mode:</strong> All lane attributes, counters, and nodes have been copied from <code>{refCode}</code>.
-            Please ensure you provide a unique <strong>Archetype ID</strong> and <strong>CSCL Lane ID</strong>.
+            Please manually enter a unique <strong>Archetype ID</strong> and <strong>CSCL Lane ID</strong>.
           </div>
-          <button
-            type="button"
-            className="btn-suggest-ids"
-            onClick={handleAutoSuggestUniqueIds}
-          >
-            ⚡ Auto-Generate Unique IDs
-          </button>
         </div>
       )}
 
@@ -346,9 +396,13 @@ export default function CreateArchetype({
         <div className="create-card">
           <div className="create-card-section-title">LANE HEADER</div>
 
-          {/* Row 1: Archetype ID, CSCL Lane ID, Status */}
+          {/* SECTION 1: IDENTITY & OWNERSHIP */}
+          <div className="detail-section-header">
+            <span className="detail-section-title">IDENTITY & OWNERSHIP</span>
+          </div>
+
+          {/* Row 1: Archetype ID, Short Description, Owner Role */}
           <div className="create-grid-3">
-            {/* Archetype ID */}
             <div className={`form-group ${errors.archetypeId ? 'has-error' : ''}`}>
               <label htmlFor="archetypeId">
                 Archetype ID <span className="req-asterisk">*</span>
@@ -357,7 +411,7 @@ export default function CreateArchetype({
                 type="text"
                 id="archetypeId"
                 name="archetypeId"
-                placeholder="e.g. ARC-0001"
+                placeholder="Enter Archetype ID"
                 value={formData.archetypeId}
                 onChange={handleChange}
               />
@@ -366,66 +420,23 @@ export default function CreateArchetype({
               )}
             </div>
 
-            {/* CSCL Lane ID * */}
-            <div className={`form-group ${errors.csclLaneId ? 'has-error' : ''}`}>
-              <label htmlFor="csclLaneId">
-                CSCL Lane ID <span className="req-asterisk">*</span>
+            <div className={`form-group ${errors.shortDesc ? 'has-error' : ''}`}>
+              <label htmlFor="shortDesc">
+                Short Description
               </label>
               <input
                 type="text"
-                id="csclLaneId"
-                name="csclLaneId"
-                placeholder="CSCL-0000"
-                value={formData.csclLaneId}
+                id="shortDesc"
+                name="shortDesc"
+                placeholder="Enter Short Description"
+                value={formData.shortDesc}
                 onChange={handleChange}
               />
-              {errors.csclLaneId && (
-                <span className="error-hint">{errors.csclLaneId}</span>
+              {errors.shortDesc && (
+                <span className="error-hint">{errors.shortDesc}</span>
               )}
             </div>
 
-            {/* Status * */}
-            <div className="form-group">
-              <label htmlFor="status">
-                Status <span className="req-asterisk">*</span>
-              </label>
-              <select
-                id="status"
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Row 2: Owner, Owner Role (Dropdown), Wave */}
-          <div className="create-grid-3" style={{ marginTop: '16px' }}>
-            {/* Owner * */}
-            <div className={`form-group ${errors.owner ? 'has-error' : ''}`}>
-              <label htmlFor="owner">
-                Owner <span className="req-asterisk">*</span>
-              </label>
-              <div className="input-with-icon">
-                <input
-                  type="text"
-                  id="owner"
-                  name="owner"
-                  placeholder="jane.doe@corp.com"
-                  value={formData.owner}
-                  onChange={handleChange}
-                />
-                <Search size={14} className="inner-search-icon" />
-              </div>
-              {errors.owner && (
-                <span className="error-hint">{errors.owner}</span>
-              )}
-            </div>
-
-            {/* Owner Role (Dropdown) */}
             <div className="form-group">
               <label htmlFor="ownerRole">Owner Role</label>
               <select
@@ -443,8 +454,70 @@ export default function CreateArchetype({
                 )}
               </select>
             </div>
+          </div>
 
-            {/* Wave */}
+          {/* Row 2: Owner *, CSCL Lane ID *, Status * */}
+          <div className="create-grid-3" style={{ marginTop: '16px' }}>
+            <div className={`form-group ${errors.owner ? 'has-error' : ''}`}>
+              <label htmlFor="owner">
+                Owner
+              </label>
+              <div className="input-with-icon">
+                <input
+                  type="text"
+                  id="owner"
+                  name="owner"
+                  placeholder="Enter Owner email"
+                  value={formData.owner}
+                  onChange={handleChange}
+                />
+                <Search size={14} className="inner-search-icon" />
+              </div>
+              {errors.owner && (
+                <span className="error-hint">{errors.owner}</span>
+              )}
+            </div>
+
+            <div className={`form-group ${errors.csclLaneId ? 'has-error' : ''}`}>
+              <label htmlFor="csclLaneId">
+                CSCL Lane ID <span className="req-asterisk">*</span>
+              </label>
+              <input
+                type="text"
+                id="csclLaneId"
+                name="csclLaneId"
+                placeholder="Enter CSCL Lane ID"
+                value={formData.csclLaneId}
+                onChange={handleChange}
+              />
+              {errors.csclLaneId && (
+                <span className="error-hint">{errors.csclLaneId}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="status">
+                Status
+              </label>
+              <select
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+              >
+                <option value="">Select Status</option>
+                {STATUS_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.status && !STATUS_OPTIONS.includes(formData.status) && (
+                  <option value={formData.status}>{formData.status}</option>
+                )}
+              </select>
+            </div>
+          </div>
+
+          {/* Row 3: Wave, Previous Wave CSCL ID, Nodes */}
+          <div className="create-grid-3" style={{ marginTop: '16px' }}>
             <div className="form-group">
               <label htmlFor="wave">Wave</label>
               <select
@@ -457,13 +530,59 @@ export default function CreateArchetype({
                 {WAVE_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>{opt}</option>
                 ))}
+                {formData.wave && !WAVE_OPTIONS.includes(formData.wave) && (
+                  <option value={formData.wave}>{formData.wave}</option>
+                )}
               </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="prevWaveCsclId">Previous Wave CSCL ID</label>
+              <input
+                type="text"
+                id="prevWaveCsclId"
+                name="prevWaveCsclId"
+                placeholder="Enter Previous Wave CSCL ID"
+                value={formData.prevWaveCsclId}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="nodesCount">
+                Nodes <span className="label-badge">{nodes.length}</span>
+              </label>
+              <input
+                type="text"
+                id="nodesCount"
+                value={`${nodes.length} nodes defined`}
+                disabled
+                className="disabled-input"
+                placeholder="Enter node information"
+              />
             </div>
           </div>
 
-          {/* Row 3: Franchise (Dropdown), Short Description */}
+          {/* Row 4: Plan GRP, Franchise */}
           <div className="create-grid-3" style={{ marginTop: '16px' }}>
-            {/* Franchise (Dropdown) */}
+            <div className="form-group">
+              <label htmlFor="planGrp">Plan GRP</label>
+              <select
+                id="planGrp"
+                name="planGrp"
+                value={formData.planGrp}
+                onChange={handleChange}
+              >
+                <option value="">Select Plan GRP</option>
+                {PLAN_GRP_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.planGrp && !PLAN_GRP_OPTIONS.includes(formData.planGrp) && (
+                  <option value={formData.planGrp}>{formData.planGrp}</option>
+                )}
+              </select>
+            </div>
+
             <div className="form-group">
               <label htmlFor="franchise">Franchise</label>
               <select
@@ -481,159 +600,282 @@ export default function CreateArchetype({
                 )}
               </select>
             </div>
-
-            {/* Short Description */}
-            <div className="form-group span-2">
-              <label htmlFor="shortDescription">Short Description</label>
-              <input
-                type="text"
-                id="shortDescription"
-                name="shortDescription"
-                placeholder="Brief purpose..."
-                value={formData.shortDescription}
-                onChange={handleChange}
-              />
-            </div>
           </div>
 
-          {/* Row 4: Legal Entities */}
-          <div className="form-group" style={{ marginTop: '16px' }}>
-            <label htmlFor="legalEntities">Legal Entities</label>
-            <input
-              type="text"
-              id="legalEntities"
-              name="legalEntities"
-              placeholder="e.g. 6040 - ETHICON US, LLC | 8525 - CILAG GMBH INTERNATIONAL"
-              value={formData.legalEntities}
-              onChange={handleChange}
-            />
+          {/* SECTION 2: PLANNING & PROJECT */}
+          <div className="detail-section-header" style={{ marginTop: '28px' }}>
+            <span className="detail-section-title">PLANNING & PROJECT</span>
           </div>
 
-          {/* Row 5: Plan Team, Plan GRP, Project */}
-          <div className="create-grid-3" style={{ marginTop: '16px' }}>
-            {/* Plan Team */}
+          {/* Row 1: Plan Team, Project (TranSCend_PRJ) */}
+          <div className="create-grid-2">
             <div className="form-group">
               <label htmlFor="planTeam">Plan Team</label>
-              <input
-                type="text"
+              <select
                 id="planTeam"
                 name="planTeam"
-                placeholder="e.g. APAC Planning"
                 value={formData.planTeam}
                 onChange={handleChange}
-              />
+              >
+                <option value="">Select Plan Team</option>
+                {PLAN_TEAM_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.planTeam && !PLAN_TEAM_OPTIONS.includes(formData.planTeam) && (
+                  <option value={formData.planTeam}>{formData.planTeam}</option>
+                )}
+              </select>
             </div>
 
-            {/* Plan GRP */}
             <div className="form-group">
-              <label htmlFor="planGrp">Plan GRP</label>
-              <input
-                type="text"
-                id="planGrp"
-                name="planGrp"
-                placeholder="e.g. PG-JP-01"
-                value={formData.planGrp}
+              <label htmlFor="transcendPrj">Project</label>
+              <select
+                id="transcendPrj"
+                name="transcendPrj"
+                value={formData.transcendPrj}
                 onChange={handleChange}
-              />
-            </div>
-
-            {/* Project */}
-            <div className="form-group">
-              <label htmlFor="project">Project</label>
-              <input
-                type="text"
-                id="project"
-                name="project"
-                placeholder="e.g. PRJ-2026-042"
-                value={formData.project}
-                onChange={handleChange}
-              />
+              >
+                <option value="">Select Project</option>
+                {PROJECT_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.transcendPrj && !PROJECT_OPTIONS.includes(formData.transcendPrj) && (
+                  <option value={formData.transcendPrj}>{formData.transcendPrj}</option>
+                )}
+              </select>
             </div>
           </div>
 
-          {/* Row 6: Nodes, Attachment (Visio), L1 Physical Flow */}
-          <div className="create-grid-3" style={{ marginTop: '16px' }}>
-            {/* Nodes */}
-            <div className="form-group">
-              <label htmlFor="nodesCount">
-                Nodes <span className="label-badge">{nodes.length}</span>
-              </label>
-              <input
-                type="text"
-                id="nodesCount"
-                value={nodes.length ? `${nodes.length} nodes defined` : 'No nodes defined'}
-                disabled
-                className="disabled-input"
-              />
-            </div>
-
-            {/* Attachment */}
-            <div className="form-group">
-              <label htmlFor="attachment">Attachment (Visio / Spec)</label>
-              <div className="attachment-input-wrapper">
-                <input
-                  type="text"
-                  id="attachment"
-                  name="attachment"
-                  placeholder="e.g. lane_spec_jp.vsdx"
-                  value={formData.attachment}
-                  onChange={handleChange}
-                />
-                <label className="btn-browse-file" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                  Browse
-                  <input
-                    type="file"
-                    style={{ display: 'none' }}
-                    accept=".vsdx,.vsd,.pdf,.doc,.docx"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        const file = e.target.files[0];
-                        setFormData((prev) => ({ ...prev, attachment: file.name }));
-                      }
-                    }}
-                  />
-                </label>
-              </div>
-            </div>
-
-            {/* L1 Physical Flow */}
-            <div className="form-group">
-              <label htmlFor="l1PhysicalFlow">L1 Physical Flow</label>
-              <input
-                type="text"
-                id="l1PhysicalFlow"
-                name="l1PhysicalFlow"
-                placeholder="e.g. US -> JP-DC -> Customer"
-                value={formData.l1PhysicalFlow}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          {/* Row 7: L1 Financial Flow */}
-          <div className="create-grid-3" style={{ marginTop: '16px' }}>
-            <div className="form-group">
-              <label htmlFor="l1FinancialFlow">L1 Financial Flow</label>
-              <input
-                type="text"
-                id="l1FinancialFlow"
-                name="l1FinancialFlow"
-                placeholder="e.g. USD -> JPY (T+2)"
-                value={formData.l1FinancialFlow}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          {/* Row 8: Comments */}
+          {/* Row 2: Comments */}
           <div className="form-group" style={{ marginTop: '16px' }}>
             <label htmlFor="comments">Comments</label>
             <textarea
               id="comments"
               name="comments"
               rows={3}
-              placeholder="Add comments or notes..."
+              placeholder="Add planning notes or comments..."
               value={formData.comments}
+              onChange={handleChange}
+              style={{ width: '100%', resize: 'vertical' }}
+            />
+          </div>
+
+          {/* SECTION 3: VOLUMES & FLOW */}
+          <div className="detail-section-header" style={{ marginTop: '28px' }}>
+            <span className="detail-section-title">VOLUMES & FLOW</span>
+          </div>
+
+          {/* Row 1: SKU Count, Sales Volume, Transactions Volume */}
+          <div className="create-grid-3">
+            <div className="form-group">
+              <label htmlFor="skuCount">SKU Count</label>
+              <input
+                type="number"
+                id="skuCount"
+                name="skuCount"
+                placeholder="0"
+                value={formData.skuCount}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="salesVol">Sales Volume</label>
+              <input
+                type="text"
+                id="salesVol"
+                name="salesVol"
+                placeholder="Annual sales volume"
+                value={formData.salesVol}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="transactionsVol">Transactions Volume</label>
+              <input
+                type="text"
+                id="transactionsVol"
+                name="transactionsVol"
+                placeholder="Annual transaction volume"
+                value={formData.transactionsVol}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {/* Row 2: APS Relevant (OMP_relevant), LEGO, Returns */}
+          <div className="create-grid-3" style={{ marginTop: '16px' }}>
+            <div className="form-group">
+              <label htmlFor="ompRelevant">APS Relevant</label>
+              <select
+                id="ompRelevant"
+                name="ompRelevant"
+                value={formData.ompRelevant}
+                onChange={handleChange}
+              >
+                <option value="">Select APS Relevant</option>
+                {APS_RELEVANT_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.ompRelevant && !APS_RELEVANT_OPTIONS.includes(formData.ompRelevant) && (
+                  <option value={formData.ompRelevant}>{formData.ompRelevant}</option>
+                )}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>LEGO</label>
+              <div style={{ display: 'flex', alignItems: 'center', height: '38px', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  id="lego-create"
+                  name="lego"
+                  checked={formData.lego === 'Not Applicable' || formData.lego === true}
+                  onChange={handleChange}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                <label
+                  htmlFor="lego-create"
+                  style={{ margin: 0, fontWeight: 500, cursor: 'pointer', color: '#475569', fontSize: '13px' }}
+                >
+                  Not Applicable
+                </label>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="returns">Returns</label>
+              <select
+                id="returns"
+                name="returns"
+                value={formData.returns}
+                onChange={handleChange}
+              >
+                <option value="">Select Returns</option>
+                {RETURNS_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.returns && !RETURNS_OPTIONS.includes(formData.returns) && (
+                  <option value={formData.returns}>{formData.returns}</option>
+                )}
+              </select>
+            </div>
+          </div>
+
+          {/* Row 3: Physical Flow, Financial Flow */}
+          <div className="create-grid-2" style={{ marginTop: '16px' }}>
+            <div className="form-group">
+              <label htmlFor="physicalFlow">Physical Flow</label>
+              <select
+                id="physicalFlow"
+                name="physicalFlow"
+                value={formData.physicalFlow}
+                onChange={handleChange}
+              >
+                <option value="">Select Physical Flow</option>
+                {PHYSICAL_FLOW_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.physicalFlow && !PHYSICAL_FLOW_OPTIONS.includes(formData.physicalFlow) && (
+                  <option value={formData.physicalFlow}>{formData.physicalFlow}</option>
+                )}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="financialFlow">Financial Flow</label>
+              <select
+                id="financialFlow"
+                name="financialFlow"
+                value={formData.financialFlow}
+                onChange={handleChange}
+              >
+                <option value="">Select Financial Flow</option>
+                {FINANCIAL_FLOW_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {formData.financialFlow && !FINANCIAL_FLOW_OPTIONS.includes(formData.financialFlow) && (
+                  <option value={formData.financialFlow}>{formData.financialFlow}</option>
+                )}
+              </select>
+            </div>
+          </div>
+
+          {/* SECTION 4: DESCRIPTION & DOCUMENTATION */}
+          <div className="detail-section-header" style={{ marginTop: '28px' }}>
+            <span className="detail-section-title">DESCRIPTION & DOCUMENTATION</span>
+          </div>
+
+          {/* Row 1: Description */}
+          <div className="form-group">
+            <label htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              name="description"
+              rows={3}
+              placeholder="Describe the lane purpose and scope..."
+              value={formData.description}
+              onChange={handleChange}
+              style={{ width: '100%', resize: 'vertical' }}
+            />
+          </div>
+
+          {/* Row 2: File Link with Browse, Documentation */}
+          <div className="create-grid-2" style={{ marginTop: '16px' }}>
+            <div className="form-group">
+              <label htmlFor="fileLink">File Link</label>
+              <div className="attachment-input-wrapper">
+                <input
+                  type="text"
+                  id="fileLink"
+                  name="fileLink"
+                  placeholder="Document URL or filename"
+                  value={formData.fileLink}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  className="btn-browse-file"
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.onchange = (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setFormData((p) => ({ ...p, fileLink: file.name }));
+                      }
+                    };
+                    input.click();
+                  }}
+                >
+                  Browse
+                </button>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="documentation">Documentation</label>
+              <input
+                type="text"
+                id="documentation"
+                name="documentation"
+                placeholder="Documentation summary or reference..."
+                value={formData.documentation}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {/* Row 3: Project Archetype ID */}
+          <div className="form-group" style={{ marginTop: '16px', maxWidth: '32%' }}>
+            <label htmlFor="prjArchId">Project Archetype ID</label>
+            <input
+              type="text"
+              id="prjArchId"
+              name="prjArchId"
+              placeholder="e.g. PRJ-ARCH-01"
+              value={formData.prjArchId}
               onChange={handleChange}
             />
           </div>

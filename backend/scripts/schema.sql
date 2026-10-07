@@ -1,9 +1,10 @@
 -- =========================================================================
 -- J&J MedTech Archetype Provisioning Hub
--- Database: LHM2
 -- Target Server: aykbsd01.database.windows.net
--- Purpose: Create isolated [archetype] schema & [lane_headers] table
--- Clean initial state (NO seed rows inserted - ready for manual UI entry)
+-- Database: LHM2
+-- Schema: [archetype]
+-- Table:  [archetype].[lane_headers]
+-- Clean creation of the 26 attributes for Lane Header
 -- =========================================================================
 
 USE [LHM2];
@@ -13,15 +14,15 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = N'archetype')
 BEGIN
     EXEC('CREATE SCHEMA [archetype]');
-    PRINT 'Schema [archetype] created successfully.';
+    PRINT '✓ Schema [archetype] created successfully.';
 END
 ELSE
 BEGIN
-    PRINT 'Schema [archetype] already exists.';
+    PRINT 'ℹ Schema [archetype] already exists.';
 END
 GO
 
--- 2. Create Table: [archetype].[lane_headers]
+-- 2. Create Table: [archetype].[lane_headers] with all 26 attributes
 IF NOT EXISTS (
     SELECT * FROM sys.objects 
     WHERE object_id = OBJECT_ID(N'[archetype].[lane_headers]') 
@@ -29,34 +30,43 @@ IF NOT EXISTS (
 )
 BEGIN
     CREATE TABLE [archetype].[lane_headers] (
-        archetype_id        VARCHAR(50)   NOT NULL PRIMARY KEY,
-        cscl_lane_id        VARCHAR(50)   NOT NULL,
-        legal_entities      VARCHAR(500)  NULL,
-        status              VARCHAR(50)   NOT NULL DEFAULT 'Draft',
-        owner_email         VARCHAR(255)  NOT NULL,
-        wave                VARCHAR(50)   NULL,
-        short_description   VARCHAR(500)  NULL,
-        plan_team           VARCHAR(100)  NULL,
-        plan_grp            VARCHAR(100)  NULL,
-        project             VARCHAR(100)  NULL,
-        nodes_count         VARCHAR(50)   NULL DEFAULT '0 nodes defined',
-        attachment_name     VARCHAR(255)  NULL,
-        visio_status        VARCHAR(50)   NULL DEFAULT 'Not Uploaded',
-        approvals_approved  INT           NULL DEFAULT 0,
-        approvals_total     INT           NULL DEFAULT 3,
-        l1_physical_flow    VARCHAR(255)  NULL,
-        l1_financial_flow   VARCHAR(255)  NULL,
+        ARCHT_ID            VARCHAR(50)   NOT NULL PRIMARY KEY,
+        Short_desc          VARCHAR(500)  NULL,
+        Owner_role          VARCHAR(100)  NULL,
+        Owner               VARCHAR(255)  NULL,
+        CSCL_Lane_ID        VARCHAR(50)   NOT NULL,
+        Status              VARCHAR(50)   NOT NULL DEFAULT '00-New',
+        Wave                VARCHAR(50)   NULL,
+        Prev_Wave_CSCL_ID   VARCHAR(50)   NULL,
+        Nodes               VARCHAR(50)   NULL DEFAULT '0 nodes defined',
+        Plan_GRP            VARCHAR(100)  NULL,
+        Franchise           VARCHAR(100)  NULL,
+        PLAN_team           VARCHAR(100)  NULL,
+        TranSCend_PRJ       VARCHAR(100)  NULL,
+        Comments            VARCHAR(MAX)  NULL,
+        SKU_Count           INT           NULL DEFAULT 0,
+        Sales_Vol           VARCHAR(100)  NULL,
+        Tranactions_Vol     VARCHAR(100)  NULL,
+        OMP_relevant        VARCHAR(50)   NULL,
+        LEGO                VARCHAR(50)   NULL,
+        Returns             VARCHAR(100)  NULL,
+        Physical_flow       VARCHAR(255)  NULL,
+        Financial_flow      VARCHAR(255)  NULL,
+        Description         VARCHAR(MAX)  NULL,
+        File_link           VARCHAR(1000) NULL,
+        prj_arch_ID         VARCHAR(100)  NULL,
+        Documentation       VARCHAR(MAX)  NULL,
         created_at          DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
         updated_at          DATETIME2     NOT NULL DEFAULT GETUTCDATE()
     );
 
-    CREATE NONCLUSTERED INDEX IX_lane_headers_cscl ON [archetype].[lane_headers] (cscl_lane_id);
-    CREATE NONCLUSTERED INDEX IX_lane_headers_owner ON [archetype].[lane_headers] (owner_email);
+    CREATE NONCLUSTERED INDEX IX_lane_headers_cscl ON [archetype].[lane_headers] (CSCL_Lane_ID);
+    CREATE NONCLUSTERED INDEX IX_lane_headers_owner ON [archetype].[lane_headers] (Owner);
 
-    PRINT 'Table [archetype].[lane_headers] created successfully.';
+    PRINT '✓ Table [archetype].[lane_headers] created successfully with all 26 fields.';
 END
 ELSE
 BEGIN
-    PRINT 'Table [archetype].[lane_headers] already exists.';
+    PRINT 'ℹ Table [archetype].[lane_headers] already exists.';
 END
 GO

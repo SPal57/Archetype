@@ -15,27 +15,39 @@ Node.js + Express backend service connected to **Azure SQL Database (`LHM2`)**.
 
 ## 📋 Table 1: Lane Header (`archetype.lane_headers`)
 
-Represents the primary card of Archetype Details with 13 attributes:
+Represents the primary card of Archetype Details with 26 attributes:
 
-| Column | Type | Constraints | Description |
+| Column (DB) | Type | UI Label | Description |
 |---|---|---|---|
-| `archetype_id` | VARCHAR(50) | PRIMARY KEY | Unique ID (e.g., `ARC-0001`) |
-| `cscl_lane_id` | VARCHAR(50) | NOT NULL, INDEXED | CSCL Lane ID (e.g., `CSCL-1001`) |
-| `code` | VARCHAR(100) | NULL | Code (e.g., `L3J1-USROTC-JP`) |
-| `title` | VARCHAR(255) | NULL | Lane Title |
-| `status` | VARCHAR(50) | DEFAULT 'Draft' | Status (Draft, Approved, New, etc.) |
-| `owner_email` | VARCHAR(255) | NOT NULL, INDEXED | Owner email address |
-| `wave` | VARCHAR(50) | NULL | Rollout wave (e.g., `Wave 3`) |
-| `short_description` | VARCHAR(500) | NULL | Short summary of the lane |
-| `plan_team` | VARCHAR(100) | NULL | Planning Team (e.g., `APAC Planning`) |
-| `plan_grp` | VARCHAR(100) | NULL | Plan Group (e.g., `PG-JP-01`) |
-| `project` | VARCHAR(100) | NULL | Associated Project ID |
-| `nodes_count` | VARCHAR(50) | NULL | Summary count (e.g., `5 nodes defined`) |
-| `attachment_name` | VARCHAR(255) | NULL | Filename (e.g., `lane_spec_jp.pdf`) |
-| `l1_physical_flow` | VARCHAR(255) | NULL | Physical Flow description |
-| `l1_financial_flow` | VARCHAR(255) | NULL | Financial Flow description |
-| `created_at` | DATETIME2 | DEFAULT GETUTCDATE() | Timestamp |
-| `updated_at` | DATETIME2 | DEFAULT GETUTCDATE() | Timestamp |
+| `ARCHT_ID` | VARCHAR(50) | Archetype ID | PRIMARY KEY (e.g. `ARC-0001`) |
+| `Short_desc` | VARCHAR(500) | Short Description | Short summary of the lane |
+| `Owner_role` | VARCHAR(100) | Owner Role | Role of the owner (dropdown LOV) |
+| `Owner` | VARCHAR(255) | Owner | Owner name or email |
+| `CSCL_Lane_ID` | VARCHAR(50) | CSCL Lane ID | Unique CSCL lane identifier |
+| `Status` | VARCHAR(50) | Status | Status (Draft, Approved, In Review, etc.) |
+| `Wave` | VARCHAR(50) | Wave | Rollout wave (dropdown LOV) |
+| `Prev_Wave_CSCL_ID`| VARCHAR(50) | Prev Wave CSCL ID | Previous wave CSCL reference ID |
+| `Nodes` | VARCHAR(50) | Nodes | Summary count / nodes label |
+| `Plan_GRP` | VARCHAR(100) | Plan GRP | Plan Group (dropdown LOV) |
+| `Franchise` | VARCHAR(100) | Franchise | Franchise unit (dropdown LOV) |
+| `PLAN_team` | VARCHAR(100) | Plan Team | Planning team (dropdown LOV) |
+| `TranSCend_PRJ` | VARCHAR(100) | **Project** | Project reference (DB: TranSCend_PRJ / UI: Project) |
+| `Comments` | VARCHAR(MAX) | Comments | Notes and commentary |
+| `SKU_Count` | INT | SKU Count | Total number of SKUs |
+| `Sales_Vol` | VARCHAR(100) | Sales Vol | Sales volume estimate |
+| `Tranactions_Vol` | VARCHAR(100) | Transactions Vol | Transaction volume estimate |
+| `OMP_relevant` | VARCHAR(50) | **APS Relevant**| Relevance flag (DB: OMP_relevant / UI: APS Relevant) |
+| `LEGO` | VARCHAR(50) | LEGO | LEGO indicator / code |
+| `Returns` | VARCHAR(100) | Returns | Returns handling / process (dropdown LOV) |
+| `Physical_flow` | VARCHAR(255) | Physical Flow | Physical distribution path (dropdown LOV) |
+| `Financial_flow` | VARCHAR(255) | Financial Flow | Financial billing path (dropdown LOV) |
+| `Description` | VARCHAR(MAX) | Description | In-depth description |
+| `File_link` | VARCHAR(1000)| File Link | Attachment or diagram link |
+| `prj_arch_ID` | VARCHAR(100) | Project Archetype ID | External/project archetype reference |
+| `Documentation` | VARCHAR(MAX) | Documentation | Documentation notes |
+| `created_at` | DATETIME2 | Created At | System audit timestamp |
+| `updated_at` | DATETIME2 | Updated At | System audit timestamp |
+
 
 ---
 

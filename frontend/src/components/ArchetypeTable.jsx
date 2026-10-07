@@ -42,7 +42,7 @@ export default function ArchetypeTable({
     if (selectedRowIds.length === archetypes.length) {
       setSelectedRowIds([]);
     } else {
-      setSelectedRowIds(archetypes.map((a) => a.id));
+      setSelectedRowIds(archetypes.map((a) => a.id || a.archtId || a.archetypeId));
     }
     setWarningMessage('');
   };
@@ -72,7 +72,7 @@ export default function ArchetypeTable({
 
       // 3. Exactly 1 row selected -> proceed to clone
       setWarningMessage('');
-      const selectedItem = archetypes.find((a) => a.id === selectedRowIds[0]);
+      const selectedItem = archetypes.find((a) => (a.id || a.archtId || a.archetypeId) === selectedRowIds[0]);
       if (onCreateClick) {
         onCreateClick('clone', selectedItem);
       }
@@ -190,13 +190,12 @@ export default function ArchetypeTable({
                   title={isAllSelected ? 'Deselect all rows' : 'Select all rows'}
                 />
               </th>
-              <th>Code</th>
+              <th>Archetype ID</th>
               <th>Lane ID</th>
               <th>Short Description</th>
-              <th>Legal Entities</th>
+              <th>Owner</th>
               <th>PFC Status</th>
-              <th>L3 Visio Status</th>
-              <th>Approvals</th>
+              <th>Visio Status</th>
               <th>Last Update</th>
               <th>Actions</th>
             </tr>
@@ -204,7 +203,7 @@ export default function ArchetypeTable({
           <tbody>
             {archetypes.length === 0 ? (
               <tr>
-                <td colSpan="10">
+                <td colSpan="9">
                   <div className="empty-table-container" style={{ padding: '40px 20px', textAlign: 'center' }}>
                     <div className="empty-icon-wrapper" style={{ margin: '0 auto 12px' }}>
                       <Database size={32} />
@@ -229,11 +228,12 @@ export default function ArchetypeTable({
               </tr>
             ) : (
               archetypes.map((row, index) => {
-                const isSelected = selectedRowIds.includes(row.id);
+                const rowId = row.id || row.archtId || row.archetypeId || row.code;
+                const isSelected = selectedRowIds.includes(rowId);
 
                 return (
                   <tr
-                    key={row.id || index}
+                    key={rowId || index}
                     className={isSelected ? 'row-selected' : ''}
                   >
                     {/* Multi-Select Checkbox */}
@@ -241,13 +241,13 @@ export default function ArchetypeTable({
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => handleToggleRow(row.id)}
+                        onChange={() => handleToggleRow(rowId)}
                         className="row-select-checkbox"
                         title={isSelected ? 'Deselect this row' : 'Select this row'}
                       />
                     </td>
 
-                    {/* Code Column - Clickable to open Archetype Detail */}
+                    {/* Archetype ID Column - Clickable to open Archetype Detail */}
                     <td className="code-cell">
                       <button
                         type="button"
@@ -255,82 +255,85 @@ export default function ArchetypeTable({
                         onClick={() => onCodeClick && onCodeClick(row)}
                         title="Click to view Archetype Detail"
                       >
-                        <span className="code-primary">{row.codeLines?.[0] || row.code || row.archetypeId}</span>
-                        {row.codeLines?.[1] && (
-                          <span className="code-sub">{row.codeLines[1]}</span>
-                        )}
-                        {row.codeLines?.[2] && (
-                          <span className="code-sub">{row.codeLines[2]}</span>
-                        )}
+                        <span className="code-primary">{row.archtId || row.archetypeId || row.code}</span>
                       </button>
                     </td>
 
                     {/* Lane ID */}
                     <td className="lane-cell">
-                      <span className="lane-id-pill">{row.laneId}</span>
+                      <span className="lane-id-pill">{row.csclLaneId || row.laneId || '—'}</span>
                     </td>
 
                     {/* Short Description */}
-                    <td className="title-cell">
-                      <strong>{row.shortDescription || row.description || '—'}</strong>
+                    <td className="title-cell" title={row.shortDesc || row.shortDescription || row.description}>
+                      <strong>{row.shortDesc || row.shortDescription || row.description || '—'}</strong>
                     </td>
 
-                    {/* Legal Entities */}
-                    <td className="legal-entities-cell">{row.legalEntities}</td>
-
-                    {/* PFC Status */}
+                    {/* Owner */}
                     <td>
-                      <div className={`pfc-status ${row.pfcStatus?.toLowerCase().replace(/\s+/g, '-')}`}>
-                        <span className={`status-dot ${row.pfcStatusClass || ''}`}></span>
-                        <span>{row.pfcStatus}</span>
+                      <div className="table-owner-cell">
+                        <span className="table-owner-name">{row.owner || row.ownerEmail || '—'}</span>
+                        {row.ownerRole && <span className="table-owner-role">({row.ownerRole})</span>}
                       </div>
                     </td>
 
-                    {/* L3 Visio Status */}
+                    {/* PFC Status (Lane Header Status field) */}
                     <td>
                       {(() => {
-                        const raw = `${row.visioClass || ''} ${row.visioStatus || ''}`.toLowerCase();
-                        let badgeClass = 'not-uploaded';
-                        if (raw.includes('approved')) badgeClass = 'approved';
-                        else if (raw.includes('progress')) badgeClass = 'in-progress';
-                        else if (raw.includes('not') || raw.includes('new') || raw.includes('upload')) badgeClass = 'not-uploaded';
-
+                        const statusVal = row.status || row.pfcStatus || '00-New';
+                        const lower = statusVal.toLowerCase();
+                        let dotClass = 'status-dot-new';
+                        if (lower.includes('approved') || lower.includes('live')) {
+                          dotClass = 'status-dot-approved';
+                        } else if (lower.includes('review') || lower.includes('hold') || lower.includes('implementing') || lower.includes('test')) {
+                          dotClass = 'status-dot-review';
+                        }
                         return (
-                          <span className={`visio-pill ${badgeClass}`}>
-                            {row.visioStatus || 'Not Uploaded'}
-                          </span>
+                          <div className={`pfc-status ${lower.replace(/[^a-z0-9]/g, '-')}`}>
+                            <span className={`status-dot ${dotClass}`}></span>
+                            <span>{statusVal}</span>
+                          </div>
                         );
                       })()}
                     </td>
 
-                    {/* Approvals */}
+                    {/* Visio Status (Depends on file attached inside archetype, otherwise 'Not Uploaded') */}
                     <td>
-                      <div className="approval-steps">
-                        <div className="approval-circles">
-                          {[1, 2, 3].map((step) => {
-                            const isApproved = step <= (row.approvals?.approved || 0);
-                            return (
-                              <div
-                                key={step}
-                                className={`approval-circle ${isApproved ? 'approved' : 'pending'}`}
-                              >
-                                {step}
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div className="approval-subtext">
-                          {row.approvals?.approved || 0} / {row.approvals?.total || 3} approved
-                        </div>
-                      </div>
+                      {(() => {
+                        const hasFile = Boolean(
+                          (row.fileLink || row.attachmentName || row.attachment || '').trim()
+                        );
+                        const statusText = hasFile
+                          ? (row.visioStatus && row.visioStatus !== 'Not Uploaded' ? row.visioStatus : 'Approval In Progress')
+                          : 'Not Uploaded';
+                        const lower = statusText.toLowerCase();
+                        let pillClass = 'not-uploaded';
+                        if (lower.includes('approved')) {
+                          pillClass = 'approved';
+                        } else if (lower.includes('progress') || lower.includes('review')) {
+                          pillClass = 'in-progress';
+                        }
+                        return <span className={`visio-pill ${pillClass}`}>{statusText}</span>;
+                      })()}
                     </td>
 
-                    {/* Last Update */}
+                    {/* Last Update (YYYY-MM-DD format) */}
                     <td>
-                      <div className="update-date">{row.lastUpdate}</div>
-                      {row.updatedBy && (
-                        <div className="update-author">by {row.updatedBy}</div>
-                      )}
+                      {(() => {
+                        const raw = row.lastUpdate || '';
+                        let formatted = '—';
+                        if (raw) {
+                          formatted = String(raw).trim().slice(0, 10).replace(/\//g, '-');
+                        }
+                        return (
+                          <div>
+                            <div className="update-date">{formatted}</div>
+                            {row.updatedBy && row.updatedBy !== row.owner && (
+                              <div className="update-author">by {row.updatedBy}</div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
 
                     {/* Actions Column */}
@@ -340,7 +343,7 @@ export default function ArchetypeTable({
                           <button
                             type="button"
                             className="btn-view"
-                            onClick={() => (onCodeClick ? onCodeClick(row) : onActionClick('View Diagram', row.code))}
+                            onClick={() => (onCodeClick ? onCodeClick(row) : onActionClick('View Details', row.archtId || row.code))}
                           >
                             View
                           </button>
@@ -348,7 +351,7 @@ export default function ArchetypeTable({
                             type="button"
                             className="btn-icon-sm"
                             title="Download"
-                            onClick={() => onActionClick('Download', row.code)}
+                            onClick={() => onActionClick('Download', row.archtId || row.code)}
                           >
                             <ArrowDown size={12} />
                           </button>
@@ -356,7 +359,7 @@ export default function ArchetypeTable({
                             type="button"
                             className="btn-icon-sm"
                             title="Move Up"
-                            onClick={() => onActionClick('Re-order Up', row.code)}
+                            onClick={() => onActionClick('Re-order Up', row.archtId || row.code)}
                           >
                             <ArrowUp size={12} />
                           </button>
@@ -364,7 +367,7 @@ export default function ArchetypeTable({
                         <button
                           type="button"
                           className="btn-replace"
-                          onClick={() => onActionClick('Replace Archetype', row.code)}
+                          onClick={() => onActionClick('Replace Archetype', row.archtId || row.code)}
                         >
                           <RefreshCw size={11} />
                           <span>Replace</span>
