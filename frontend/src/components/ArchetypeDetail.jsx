@@ -12,26 +12,16 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-// Pre-configured dropdown values for Franchise and Owner Role (can be updated when final LOV list is provided)
-const FRANCHISE_OPTIONS = [
-  'MedTech',
-  'Ethicon',
-  'DePuy Synthes',
-  'Biosense Webster',
-  'Vision',
-  'CSS',
-  'Innovative Medicine'
-];
-
-const OWNER_ROLE_OPTIONS = [
-  'Owner',
-  'Lead',
-  'Planner',
-  'Approver',
-  'Supply Chain Lead',
-  'Architect',
-  'Administrator'
-];
+import {
+  OWNER_ROLE_OPTIONS,
+  FRANCHISE_OPTIONS,
+  STATUS_OPTIONS,
+  WAVE_OPTIONS,
+  PATTERN_ID_OPTIONS,
+  NODE_TYPE_OPTIONS,
+  NODE_PURPOSE_OPTIONS,
+  INCO_TERM_OPTIONS
+} from '../data/lovData';
 
 export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack, onSaveEdit }) {
   // Edit mode state
@@ -449,9 +439,9 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
                 onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
                 className="form-control-edit"
               >
-                <option value="Draft">Draft</option>
-                <option value="In Review">In Review</option>
-                <option value="Approved">Approved</option>
+                {STATUS_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
               </select>
             ) : (
               <input
@@ -523,10 +513,9 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
                 className="form-control-edit"
               >
                 <option value="">Select Wave</option>
-                <option value="Wave 1">Wave 1</option>
-                <option value="Wave 2">Wave 2</option>
-                <option value="Wave 3">Wave 3</option>
-                <option value="Wave 4">Wave 4</option>
+                {WAVE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
               </select>
             ) : (
               <input
@@ -1016,9 +1005,9 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
                     }))
                   }
                 >
-                  <option value="P-V-P">P-V-P</option>
-                  <option value="P-FP">P-FP</option>
-                  <option value="P-P">P-P</option>
+                  {PATTERN_ID_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
                 </select>
               </div>
               <div className="two-col-grid">
@@ -1134,18 +1123,20 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
                     value={nodeModal.data.type}
                     onChange={(e) => {
                       const val = e.target.value;
+                      const matched = NODE_TYPE_OPTIONS.find((t) => t.code === val);
                       setNodeModal((prev) => ({
                         ...prev,
                         data: {
                           ...prev.data,
                           type: val,
-                          typeColor: val === 'V' ? 'orange' : 'purple'
+                          typeColor: matched ? matched.color : 'purple'
                         }
                       }));
                     }}
                   >
-                    <option value="P">P (Plant / Hub)</option>
-                    <option value="V">V (Vendor)</option>
+                    {NODE_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.code} value={opt.code}>{opt.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group">
@@ -1154,18 +1145,20 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
                     value={nodeModal.data.purpose}
                     onChange={(e) => {
                       const val = e.target.value;
+                      const matched = NODE_PURPOSE_OPTIONS.find((p) => p.code === val);
                       setNodeModal((prev) => ({
                         ...prev,
                         data: {
                           ...prev.data,
                           purpose: val,
-                          purposeColor: val === 'DC' ? 'amber' : 'green'
+                          purposeColor: matched ? matched.color : 'green'
                         }
                       }));
                     }}
                   >
-                    <option value="M">M (Manufacturing)</option>
-                    <option value="DC">DC (Distribution Center)</option>
+                    {NODE_PURPOSE_OPTIONS.map((opt) => (
+                      <option key={opt.code} value={opt.code}>{opt.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -1194,11 +1187,9 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
                     }))
                   }
                 >
-                  <option value="EXW">EXW</option>
-                  <option value="CIF">CIF</option>
-                  <option value="DAP">DAP</option>
-                  <option value="FOB">FOB</option>
-                  <option value="DDP">DDP</option>
+                  {INCO_TERM_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
                 </select>
               </div>
               <div className="modal-actions-footer">

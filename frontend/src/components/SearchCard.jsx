@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Filter } from 'lucide-react';
+import { PATTERN_ID_OPTIONS, SEARCH_STATUS_OPTIONS } from '../data/lovData';
 
 export default function SearchCard({ onOpenAdvancedSearch, onSearch, onReset }) {
   const [formData, setFormData] = useState({
@@ -69,9 +70,9 @@ export default function SearchCard({ onOpenAdvancedSearch, onSearch, onReset }) 
                 onChange={handleChange}
               >
                 <option value="All Patterns">All Patterns</option>
-                <option value="P-P">P-P</option>
-                <option value="P-V-P">P-V-P</option>
-                <option value="P-FP">P-FP</option>
+                {PATTERN_ID_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
               </select>
             </div>
 
@@ -84,13 +85,9 @@ export default function SearchCard({ onOpenAdvancedSearch, onSearch, onReset }) 
                 value={formData.status}
                 onChange={handleChange}
               >
-                <option value="All Statuses">All Statuses</option>
-                <option value="Approved">Approved</option>
-                <option value="Approval in Progress">Approval in Progress</option>
-                <option value="Ready for Approval">Ready for Approval</option>
-                <option value="New">New</option>
-                <option value="Draft">Draft</option>
-                <option value="Reopened">Reopened</option>
+                {SEARCH_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
               </select>
             </div>
 
@@ -126,7 +123,6 @@ export default function SearchCard({ onOpenAdvancedSearch, onSearch, onReset }) 
               </div>
             </div>
 
-            {/* 5. Short Description */}
             <div className="form-group">
               <label htmlFor="description">Short Description</label>
               <input

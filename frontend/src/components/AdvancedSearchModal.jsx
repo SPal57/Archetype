@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { X, Calendar } from 'lucide-react';
+import { PFC_STATUS_OPTIONS } from '../data/lovData';
 
 export default function AdvancedSearchModal({ isOpen, onClose, onApplyFilters }) {
   const [filters, setFilters] = useState({
@@ -226,11 +227,9 @@ export default function AdvancedSearchModal({ isOpen, onClose, onApplyFilters })
                     value={filters.pfcStatus}
                     onChange={handleChange}
                   >
-                    <option value="Any">Any</option>
-                    <option value="Approved">Approved</option>
-                    <option value="New">New</option>
-                    <option value="Draft">Draft</option>
-                    <option value="In Progress">In Progress</option>
+                    {PFC_STATUS_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
                   </select>
                 </div>
               </div>

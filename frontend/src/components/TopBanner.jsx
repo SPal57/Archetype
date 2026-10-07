@@ -1,8 +1,9 @@
 import React from 'react';
 import { User, ChevronDown } from 'lucide-react';
+import { USER_OPTIONS } from '../data/lovData';
 
 export default function TopBanner({ currentUser, setCurrentUser, onUserSwitch }) {
-  const users = ['Andres Simar', 'Lisa Chen', 'Anna Mueller', 'Guest (not approver)'];
+  const users = USER_OPTIONS;
 
   const handleChange = (e) => {
     const newUser = e.target.value;
