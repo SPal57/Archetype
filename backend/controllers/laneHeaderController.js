@@ -13,8 +13,57 @@ async function ensureTableReady() {
       await schemaManager.syncSchema();
       clearColumnsCache();
     }
+    await backfillExistingData();
   } catch (err) {
     console.warn('[laneHeaderController] Table readiness check warning:', err.message);
+  }
+}
+
+// Helper to format Description as [Arch ID] Short description Lane ID
+export function computeArchetypeDescription(archId, shortDesc, csclId) {
+  const cleanArch = (archId || '').trim();
+  const cleanShort = (shortDesc || '').trim();
+  const cleanCscl = (csclId || '').trim();
+  const archPart = cleanArch ? `[${cleanArch}]` : '';
+  return [archPart, cleanShort, cleanCscl].filter(Boolean).join(' ');
+}
+
+// Backfill existing rows so Description and prj_arch_ID follow the new format
+let isBackfillDone = false;
+async function backfillExistingData() {
+  if (isBackfillDone) return;
+  try {
+    const pool = await getDbPool();
+    const cols = await getTableColumns('lane_headers', SCHEMA);
+    const colNames = cols.map((c) => c.columnName.toLowerCase());
+
+    const archCol = colNames.includes('archetype_id') ? 'archetype_id' : 'ARCHT_ID';
+    const shortDescCol = colNames.includes('short_description') ? 'short_description' : 'Short_desc';
+    const csclCol = colNames.includes('cscl_lane_id')
+      ? (cols.find((c) => c.columnName.toLowerCase() === 'cscl_lane_id')?.columnName || 'CSCL_Lane_ID')
+      : 'CSCL_Lane_ID';
+    const descCol = colNames.includes('description')
+      ? (cols.find((c) => c.columnName.toLowerCase() === 'description')?.columnName || 'Description')
+      : 'Description';
+    const prjCol = colNames.includes('prj_arch_id')
+      ? (cols.find((c) => c.columnName.toLowerCase() === 'prj_arch_id')?.columnName || 'prj_arch_ID')
+      : 'prj_arch_ID';
+
+    const result = await pool.request().query(`
+      UPDATE [${SCHEMA}].[lane_headers]
+      SET [${descCol}] = '[' + RTRIM(LTRIM([${archCol}])) + ']' + 
+          CASE WHEN [${shortDescCol}] IS NOT NULL AND LTRIM(RTRIM([${shortDescCol}])) <> '' THEN ' ' + LTRIM(RTRIM([${shortDescCol}])) ELSE '' END + 
+          CASE WHEN [${csclCol}] IS NOT NULL AND LTRIM(RTRIM([${csclCol}])) <> '' THEN ' ' + LTRIM(RTRIM([${csclCol}])) ELSE '' END,
+          [${prjCol}] = [${archCol}]
+      WHERE [${archCol}] IS NOT NULL
+        AND ([${descCol}] IS NULL OR [${descCol}] NOT LIKE '[' + RTRIM(LTRIM([${archCol}])) + ']%' OR [${prjCol}] IS NULL OR [${prjCol}] <> [${archCol}])
+    `);
+    isBackfillDone = true;
+    if (result.rowsAffected?.[0] > 0) {
+      console.log(`[laneHeaderController] Backfilled Description and prj_arch_ID for ${result.rowsAffected[0]} records in [${SCHEMA}].[lane_headers].`);
+    }
+  } catch (err) {
+    console.warn('[laneHeaderController] Backfill check warning:', err.message);
   }
 }
 
@@ -51,9 +100,12 @@ function mapLaneHeaderRow(row) {
   const returns = row.Returns || row.returns || '';
   const physicalFlow = row.Physical_flow || row.l1_physical_flow || '';
   const financialFlow = row.Financial_flow || row.l1_financial_flow || '';
-  const description = row.Description || row.description || '';
+
+  const expectedDesc = codeId ? computeArchetypeDescription(codeId, shortDesc, laneId) : '';
+  const rawDesc = row.Description || row.description || '';
+  const description = (rawDesc && rawDesc.startsWith(`[${codeId}]`)) ? rawDesc : (expectedDesc || rawDesc);
   const fileLink = row.File_link || row.file_link || '';
-  const prjArchId = row.prj_arch_ID || row.prj_arch_id || '';
+  const prjArchId = row.prj_arch_ID || row.prj_arch_id || codeId;
   const documentation = row.Documentation || row.documentation || '';
   const createdAt = row.created_at;
   const updatedAt = row.updated_at;
@@ -178,13 +230,14 @@ export const createLaneHeader = async (req, res) => {
   const b = req.body;
   const archId = (b.ARCHT_ID || b.archetypeId || b.archtId || '').trim();
   const csclId = (b.CSCL_Lane_ID || b.csclLaneId || b.laneId || '').trim();
+  const shortDescVal = (b.Short_desc || b.shortDesc || b.shortDescription || '').trim();
   const ownerVal = (b.Owner || b.owner || b.ownerEmail || '').trim();
 
-  // Mandatory fields: Archetype ID and CSCL Lane ID
-  if (!archId || !csclId) {
+  // Mandatory fields: Archetype ID, Short Description, and CSCL Lane ID
+  if (!archId || !csclId || !shortDescVal) {
     return res.status(400).json({
       success: false,
-      message: 'Archetype ID and CSCL Lane ID are required fields.'
+      message: 'Archetype ID, Short Description, and CSCL Lane ID are required fields.'
     });
   }
 
@@ -228,9 +281,12 @@ export const createLaneHeader = async (req, res) => {
       }
     }
 
+    const computedDesc = computeArchetypeDescription(archId, shortDescVal, csclId);
+    const computedPrj = archId;
+
     await insertRecord('lane_headers', {
       ARCHT_ID: archId,
-      Short_desc: b.Short_desc || b.shortDesc || b.shortDescription || null,
+      Short_desc: shortDescVal,
       Owner_role: b.Owner_role || b.ownerRole || null,
       Owner: ownerVal || null,
       CSCL_Lane_ID: csclId,
@@ -251,9 +307,9 @@ export const createLaneHeader = async (req, res) => {
       Returns: b.Returns || b.returns || null,
       Physical_flow: b.Physical_flow || b.physicalFlow || null,
       Financial_flow: b.Financial_flow || b.financialFlow || null,
-      Description: b.Description || b.description || null,
+      Description: computedDesc,
       File_link: b.File_link || b.fileLink || null,
-      prj_arch_ID: b.prj_arch_ID || b.prjArchId || null,
+      prj_arch_ID: computedPrj,
       Documentation: b.Documentation || b.documentation || null
     }, SCHEMA);
 
@@ -283,13 +339,14 @@ export const updateLaneHeader = async (req, res) => {
   const b = req.body;
   const targetArchId = (b.ARCHT_ID || b.archetypeId || b.archtId || id).trim();
   const targetCsclId = (b.CSCL_Lane_ID || b.csclLaneId || b.laneId || '').trim();
+  const shortDescVal = (b.Short_desc || b.shortDesc || b.shortDescription || '').trim();
   const ownerVal = (b.Owner || b.owner || b.ownerEmail || '').trim();
 
-  // Mandatory fields: Archetype ID and CSCL Lane ID
-  if (!targetArchId || !targetCsclId) {
+  // Mandatory fields: Archetype ID, Short Description, and CSCL Lane ID
+  if (!targetArchId || !targetCsclId || !shortDescVal) {
     return res.status(400).json({
       success: false,
-      message: 'Archetype ID and CSCL Lane ID are required fields.'
+      message: 'Archetype ID, Short Description, and CSCL Lane ID are required fields.'
     });
   }
 
@@ -335,9 +392,12 @@ export const updateLaneHeader = async (req, res) => {
     const skuNum = rawSku !== undefined && rawSku !== null && rawSku !== '' ? Number(rawSku) : 0;
     const skuCount = isNaN(skuNum) ? 0 : skuNum;
 
+    const computedDesc = computeArchetypeDescription(targetArchId, shortDescVal, targetCsclId);
+    const computedPrj = targetArchId;
+
     await updateRecord('lane_headers', {
       ARCHT_ID: targetArchId,
-      Short_desc: b.Short_desc || b.shortDesc || b.shortDescription || null,
+      Short_desc: shortDescVal,
       Owner_role: b.Owner_role || b.ownerRole || null,
       Owner: ownerVal || null,
       CSCL_Lane_ID: targetCsclId || null,
@@ -358,9 +418,9 @@ export const updateLaneHeader = async (req, res) => {
       Returns: b.Returns || b.returns || null,
       Physical_flow: b.Physical_flow || b.physicalFlow || null,
       Financial_flow: b.Financial_flow || b.financialFlow || null,
-      Description: b.Description || b.description || null,
+      Description: computedDesc,
       File_link: b.File_link || b.fileLink || null,
-      prj_arch_ID: b.prj_arch_ID || b.prjArchId || null,
+      prj_arch_ID: computedPrj,
       Documentation: b.Documentation || b.documentation || null,
       updated_at: new Date()
     }, {

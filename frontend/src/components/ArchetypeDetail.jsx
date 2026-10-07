@@ -37,13 +37,27 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
   const [isSaving, setIsSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
+  // Helper to format Description as [Arch ID] Short description Lane ID
+  const computeDescription = (archId, sDesc, laneId) => {
+    const cleanArch = (archId || '').trim();
+    const cleanShort = (sDesc || '').trim();
+    const cleanLane = (laneId || '').trim();
+    const archPart = cleanArch ? `[${cleanArch}]` : '';
+    return [archPart, cleanShort, cleanLane].filter(Boolean).join(' ');
+  };
+
+  const initialArchId = archetype?.archetypeId || archetype?.archtId || archetype?.code || archetype?.id || '';
+  const initialShortDesc = archetype?.shortDesc || archetype?.shortDescription || '';
+  const initialLaneId = archetype?.csclLaneId || archetype?.laneId || '';
+  const initialComputedDesc = computeDescription(initialArchId, initialShortDesc, initialLaneId);
+
   // Editable form state initialized from archetype prop
   const [formData, setFormData] = useState({
-    archetypeId: archetype?.archetypeId || archetype?.archtId || archetype?.code || archetype?.id || '',
-    shortDesc: archetype?.shortDesc || archetype?.shortDescription || '',
+    archetypeId: initialArchId,
+    shortDesc: initialShortDesc,
     ownerRole: archetype?.ownerRole || '',
     owner: archetype?.owner || archetype?.ownerEmail || '',
-    csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
+    csclLaneId: initialLaneId,
     status: archetype?.status || archetype?.pfcStatus || '00-New',
     wave: archetype?.wave || '',
     prevWaveCsclId: archetype?.prevWaveCsclId || '',
@@ -61,9 +75,9 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
     returns: archetype?.returns || '',
     physicalFlow: archetype?.physicalFlow || archetype?.l1PhysicalFlow || '',
     financialFlow: archetype?.financialFlow || archetype?.l1FinancialFlow || '',
-    description: archetype?.description || '',
+    description: initialComputedDesc || archetype?.description || '',
     fileLink: archetype?.fileLink || archetype?.attachmentName || '',
-    prjArchId: archetype?.prjArchId || '',
+    prjArchId: initialArchId || archetype?.prjArchId || '',
     documentation: archetype?.documentation || ''
   });
 
@@ -76,12 +90,17 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
 
   // Sync state whenever selected archetype changes
   useEffect(() => {
+    const curArchId = archetype?.archetypeId || archetype?.archtId || archetype?.code || archetype?.id || '';
+    const curShortDesc = archetype?.shortDesc || archetype?.shortDescription || '';
+    const curLaneId = archetype?.csclLaneId || archetype?.laneId || '';
+    const curComputedDesc = computeDescription(curArchId, curShortDesc, curLaneId);
+
     setFormData({
-      archetypeId: archetype?.archetypeId || archetype?.archtId || archetype?.code || archetype?.id || '',
-      shortDesc: archetype?.shortDesc || archetype?.shortDescription || '',
+      archetypeId: curArchId,
+      shortDesc: curShortDesc,
       ownerRole: archetype?.ownerRole || '',
       owner: archetype?.owner || archetype?.ownerEmail || '',
-      csclLaneId: archetype?.csclLaneId || archetype?.laneId || '',
+      csclLaneId: curLaneId,
       status: archetype?.status || archetype?.pfcStatus || '00-New',
       wave: archetype?.wave || '',
       prevWaveCsclId: archetype?.prevWaveCsclId || '',
@@ -99,9 +118,9 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
       returns: archetype?.returns || '',
       physicalFlow: archetype?.physicalFlow || archetype?.l1PhysicalFlow || '',
       financialFlow: archetype?.financialFlow || archetype?.l1FinancialFlow || '',
-      description: archetype?.description || '',
+      description: curComputedDesc || archetype?.description || '',
       fileLink: archetype?.fileLink || archetype?.attachmentName || '',
-      prjArchId: archetype?.prjArchId || '',
+      prjArchId: curArchId || archetype?.prjArchId || '',
       documentation: archetype?.documentation || ''
     });
     const currentCounters = Array.isArray(archetype?.counters) ? archetype.counters : [];
@@ -111,6 +130,22 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
     setIsEditing(false);
     setEditError('');
   }, [archetype]);
+
+  // Keep Description and Project Archetype ID automatically synchronized when editing
+  useEffect(() => {
+    if (isEditing) {
+      const computedDesc = computeDescription(formData.archetypeId, formData.shortDesc, formData.csclLaneId);
+      const computedPrj = formData.archetypeId ? formData.archetypeId.trim() : '';
+
+      if (formData.description !== computedDesc || formData.prjArchId !== computedPrj) {
+        setFormData((prev) => ({
+          ...prev,
+          description: computedDesc,
+          prjArchId: computedPrj
+        }));
+      }
+    }
+  }, [formData.archetypeId, formData.shortDesc, formData.csclLaneId, isEditing]);
 
   // Modals for Counter & Node Edit/Add
   const [counterModal, setCounterModal] = useState({
@@ -270,6 +305,10 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
       setEditError('Archetype ID is a required field.');
       return;
     }
+    if (!formData.shortDesc?.trim()) {
+      setEditError('Short Description is a required field.');
+      return;
+    }
     if (!newCsclId) {
       setEditError('CSCL Lane ID is a required field.');
       return;
@@ -313,11 +352,18 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
     // 3. Save updates
     try {
       setIsSaving(true);
+      const finalDesc = computeDescription(newArchId, formData.shortDesc, newCsclId);
+      const finalPrj = newArchId;
+
       if (onSaveEdit) {
         await onSaveEdit(originalArchId, {
           ...formData,
           archetypeId: newArchId,
           csclLaneId: newCsclId,
+          shortDesc: formData.shortDesc.trim(),
+          shortDescription: formData.shortDesc.trim(),
+          description: finalDesc,
+          prjArchId: finalPrj,
           owner: newOwner,
           ownerRole: formData.ownerRole,
           franchise: formData.franchise,
@@ -448,7 +494,9 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
           </div>
 
           <div className="form-group">
-            <label>Short Description</label>
+            <label>
+              Short Description {isEditing && <span className="req-asterisk">*</span>}
+            </label>
             {isEditing ? (
               <input
                 type="text"
@@ -986,32 +1034,25 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
           <span className="detail-section-title">DESCRIPTION & DOCUMENTATION</span>
         </div>
 
-        {/* Row 1: Description */}
-        <div className="form-group">
-          <label>Description</label>
-          {isEditing ? (
-            <textarea
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-              className="form-control-edit"
-              placeholder="Describe the lane purpose and scope..."
-              style={{ width: '100%', resize: 'vertical' }}
-            />
-          ) : (
-            <textarea
-              rows={3}
+        {/* Row 1: Description & File Link */}
+        <div className="create-grid-2">
+          <div className="form-group">
+            <label>Description</label>
+            <input
+              type="text"
               value={formData.description || ''}
               readOnly
-              className="read-only-input"
-              placeholder="Describe the lane purpose and scope..."
-              style={{ width: '100%', resize: 'none' }}
+              disabled
+              className="read-only-input disabled-input"
+              placeholder="[Archetype ID] Short Description Lane ID"
+              style={{
+                backgroundColor: '#F8FAFC',
+                color: '#475569',
+                cursor: 'not-allowed'
+              }}
             />
-          )}
-        </div>
+          </div>
 
-        {/* Row 2: File Link with Browse, Documentation */}
-        <div className="create-grid-2" style={{ marginTop: '16px' }}>
           <div className="form-group">
             <label>File Link</label>
             {isEditing ? (
@@ -1065,7 +1106,10 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
               />
             )}
           </div>
+        </div>
 
+        {/* Row 2: Documentation & Project Archetype ID */}
+        <div className="create-grid-2" style={{ marginTop: '16px' }}>
           <div className="form-group">
             <label>Documentation</label>
             {isEditing ? (
@@ -1086,28 +1130,23 @@ export default function ArchetypeDetail({ archetype, allArchetypes = [], onBack,
               />
             )}
           </div>
-        </div>
 
-        {/* Row 3: Project Archetype ID */}
-        <div className="form-group" style={{ marginTop: '16px', maxWidth: '32%' }}>
-          <label>Project Archetype ID</label>
-          {isEditing ? (
+          <div className="form-group">
+            <label>Project Archetype ID</label>
             <input
               type="text"
-              value={formData.prjArchId}
-              onChange={(e) => setFormData((p) => ({ ...p, prjArchId: e.target.value }))}
-              className="form-control-edit"
-              placeholder="e.g. PRJ-ARCH-01"
-            />
-          ) : (
-            <input
-              type="text"
-              value={formData.prjArchId || ''}
+              value={formData.prjArchId || formData.archetypeId || ''}
               readOnly
-              className="read-only-input"
-              placeholder="Not specified"
+              disabled
+              className="read-only-input disabled-input"
+              placeholder="e.g. PRJ-ARCH-01"
+              style={{
+                backgroundColor: '#F8FAFC',
+                color: '#475569',
+                cursor: 'not-allowed'
+              }}
             />
-          )}
+          </div>
         </div>
       </div>
 

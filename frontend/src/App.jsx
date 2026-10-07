@@ -454,77 +454,84 @@ export default function App() {
     const apsValue = (updatedRecord.ompRelevant || updatedRecord.apsRelevant || '').trim();
 
     // 1. Persist to Express backend / Azure SQL
-    const res = await fetch(`http://localhost:5000/api/lane-headers/${encodeURIComponent(originalId)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...updatedRecord,
-        ARCHT_ID: newArchId,
-        archetypeId: newArchId,
-        CSCL_Lane_ID: newCsclId,
-        csclLaneId: newCsclId,
-        Short_desc: descValue,
-        shortDesc: descValue,
-        shortDescription: descValue,
-        Owner: updatedRecord.owner,
-        owner: updatedRecord.owner,
-        Owner_role: updatedRecord.ownerRole,
-        ownerRole: updatedRecord.ownerRole,
-        Wave: updatedRecord.wave,
-        wave: updatedRecord.wave,
-        Prev_Wave_CSCL_ID: updatedRecord.prevWaveCsclId,
-        prevWaveCsclId: updatedRecord.prevWaveCsclId,
-        Nodes: typeof updatedRecord.nodesCount === 'string' ? updatedRecord.nodesCount : (Array.isArray(updatedRecord.nodes) ? `${updatedRecord.nodes.length} nodes defined` : '0 nodes defined'),
-        nodesCount: typeof updatedRecord.nodesCount === 'string' ? updatedRecord.nodesCount : (Array.isArray(updatedRecord.nodes) ? `${updatedRecord.nodes.length} nodes defined` : '0 nodes defined'),
-        Plan_GRP: updatedRecord.planGrp,
-        planGrp: updatedRecord.planGrp,
-        Franchise: updatedRecord.franchise,
-        franchise: updatedRecord.franchise,
-        PLAN_team: updatedRecord.planTeam,
-        planTeam: updatedRecord.planTeam,
-        TranSCend_PRJ: projectValue,
-        project: projectValue,
-        transcendPrj: projectValue,
-        Comments: updatedRecord.comments,
-        comments: updatedRecord.comments,
-        SKU_Count: updatedRecord.skuCount !== undefined && updatedRecord.skuCount !== '' ? Number(updatedRecord.skuCount) : 0,
-        skuCount: updatedRecord.skuCount !== undefined && updatedRecord.skuCount !== '' ? Number(updatedRecord.skuCount) : 0,
-        Sales_Vol: updatedRecord.salesVol,
-        salesVol: updatedRecord.salesVol,
-        Tranactions_Vol: updatedRecord.transactionsVol,
-        transactionsVol: updatedRecord.transactionsVol,
-        OMP_relevant: apsValue,
-        ompRelevant: apsValue,
-        apsRelevant: apsValue,
-        LEGO: updatedRecord.lego,
-        lego: updatedRecord.lego,
-        Returns: updatedRecord.returns,
-        returns: updatedRecord.returns,
-        Physical_flow: updatedRecord.physicalFlow,
-        physicalFlow: updatedRecord.physicalFlow,
-        Financial_flow: updatedRecord.financialFlow,
-        financialFlow: updatedRecord.financialFlow,
-        Description: updatedRecord.description,
-        description: updatedRecord.description,
-        File_link: updatedRecord.fileLink,
-        fileLink: updatedRecord.fileLink,
-        prj_arch_ID: updatedRecord.prjArchId,
-        prjArchId: updatedRecord.prjArchId,
-        Documentation: updatedRecord.documentation,
-        documentation: updatedRecord.documentation,
-        Status: updatedRecord.status || '00-New',
-        status: updatedRecord.status || '00-New'
-      })
-    });
+    try {
+      const res = await fetch(`http://localhost:5000/api/lane-headers/${encodeURIComponent(originalId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...updatedRecord,
+          ARCHT_ID: newArchId,
+          archetypeId: newArchId,
+          CSCL_Lane_ID: newCsclId,
+          csclLaneId: newCsclId,
+          Short_desc: descValue,
+          shortDesc: descValue,
+          shortDescription: descValue,
+          Owner: updatedRecord.owner,
+          owner: updatedRecord.owner,
+          Owner_role: updatedRecord.ownerRole,
+          ownerRole: updatedRecord.ownerRole,
+          Wave: updatedRecord.wave,
+          wave: updatedRecord.wave,
+          Prev_Wave_CSCL_ID: updatedRecord.prevWaveCsclId,
+          prevWaveCsclId: updatedRecord.prevWaveCsclId,
+          Nodes: typeof updatedRecord.nodesCount === 'string' ? updatedRecord.nodesCount : (Array.isArray(updatedRecord.nodes) ? `${updatedRecord.nodes.length} nodes defined` : '0 nodes defined'),
+          nodesCount: typeof updatedRecord.nodesCount === 'string' ? updatedRecord.nodesCount : (Array.isArray(updatedRecord.nodes) ? `${updatedRecord.nodes.length} nodes defined` : '0 nodes defined'),
+          Plan_GRP: updatedRecord.planGrp,
+          planGrp: updatedRecord.planGrp,
+          Franchise: updatedRecord.franchise,
+          franchise: updatedRecord.franchise,
+          PLAN_team: updatedRecord.planTeam,
+          planTeam: updatedRecord.planTeam,
+          TranSCend_PRJ: projectValue,
+          project: projectValue,
+          transcendPrj: projectValue,
+          Comments: updatedRecord.comments,
+          comments: updatedRecord.comments,
+          SKU_Count: updatedRecord.skuCount !== undefined && updatedRecord.skuCount !== '' ? Number(updatedRecord.skuCount) : 0,
+          skuCount: updatedRecord.skuCount !== undefined && updatedRecord.skuCount !== '' ? Number(updatedRecord.skuCount) : 0,
+          Sales_Vol: updatedRecord.salesVol,
+          salesVol: updatedRecord.salesVol,
+          Tranactions_Vol: updatedRecord.transactionsVol,
+          transactionsVol: updatedRecord.transactionsVol,
+          OMP_relevant: apsValue,
+          ompRelevant: apsValue,
+          apsRelevant: apsValue,
+          LEGO: updatedRecord.lego,
+          lego: updatedRecord.lego,
+          Returns: updatedRecord.returns,
+          returns: updatedRecord.returns,
+          Physical_flow: updatedRecord.physicalFlow,
+          physicalFlow: updatedRecord.physicalFlow,
+          Financial_flow: updatedRecord.financialFlow,
+          financialFlow: updatedRecord.financialFlow,
+          Description: updatedRecord.description,
+          description: updatedRecord.description,
+          File_link: updatedRecord.fileLink,
+          fileLink: updatedRecord.fileLink,
+          prj_arch_ID: updatedRecord.prjArchId,
+          prjArchId: updatedRecord.prjArchId,
+          Documentation: updatedRecord.documentation,
+          documentation: updatedRecord.documentation,
+          Status: updatedRecord.status || '00-New',
+          status: updatedRecord.status || '00-New'
+        })
+      });
 
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.success) {
-      const detail = json.error ? `: ${json.error}` : '';
-      throw new Error((json.message || 'Failed to update archetype in database') + detail);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) {
+        const detail = json.error ? `: ${json.error}` : '';
+        throw new Error((json.message || 'Failed to update archetype in database') + detail);
+      }
+
+      // Refresh database state
+      fetchArchetypes();
+    } catch (err) {
+      if (err.message && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.name === 'TypeError')) {
+        throw new Error('Backend server is offline or unreachable on http://localhost:5000. Please start the backend with "node server.js" in the backend directory.');
+      }
+      throw err;
     }
-
-    // Refresh database state
-    fetchArchetypes();
 
     const hasVisio = Boolean((updatedRecord.fileLink || updatedRecord.attachmentName || updatedRecord.attachment || '').trim());
     const visioStatus = hasVisio ? 'Approval In Progress' : 'Not Uploaded';

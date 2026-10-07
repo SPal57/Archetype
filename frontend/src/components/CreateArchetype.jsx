@@ -199,12 +199,51 @@ export default function CreateArchetype({
     setErrors({});
   }, [isClone, referenceData]);
 
+  // Helper to format Description as [Arch ID] Short description Lane ID
+  const computeDescription = (archId, sDesc, laneId) => {
+    const cleanArch = (archId || '').trim();
+    const cleanShort = (sDesc || '').trim();
+    const cleanLane = (laneId || '').trim();
+    const archPart = cleanArch ? `[${cleanArch}]` : '';
+    return [archPart, cleanShort, cleanLane].filter(Boolean).join(' ');
+  };
+
+  // Keep Description and Project Archetype ID automatically synchronized
+  useEffect(() => {
+    const computedDesc = computeDescription(formData.archetypeId, formData.shortDesc, formData.csclLaneId);
+    const computedPrj = formData.archetypeId ? formData.archetypeId.trim() : '';
+
+    if (formData.description !== computedDesc || formData.prjArchId !== computedPrj) {
+      setFormData((prev) => ({
+        ...prev,
+        description: computedDesc,
+        prjArchId: computedPrj
+      }));
+    }
+  }, [formData.archetypeId, formData.shortDesc, formData.csclLaneId]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (checked ? 'Not Applicable' : '') : value
-    }));
+    const newVal = type === 'checkbox' ? (checked ? 'Not Applicable' : '') : value;
+
+    setFormData((prev) => {
+      const next = {
+        ...prev,
+        [name]: newVal
+      };
+      if (name === 'archetypeId') {
+        next.prjArchId = newVal.trim();
+      }
+      if (name === 'archetypeId' || name === 'shortDesc' || name === 'csclLaneId') {
+        next.description = computeDescription(
+          name === 'archetypeId' ? newVal : next.archetypeId,
+          name === 'shortDesc' ? newVal : next.shortDesc,
+          name === 'csclLaneId' ? newVal : next.csclLaneId
+        );
+      }
+      return next;
+    });
+
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: null }));
     }
@@ -215,9 +254,12 @@ export default function CreateArchetype({
     e.preventDefault();
     const newErrors = {};
 
-    // Mandatory fields: Archetype ID and CSCL Lane ID
+    // Mandatory fields: Archetype ID, Short Description, and CSCL Lane ID
     if (!formData.archetypeId.trim()) {
       newErrors.archetypeId = 'Archetype ID is required';
+    }
+    if (!formData.shortDesc.trim()) {
+      newErrors.shortDesc = 'Short Description is required';
     }
     if (!formData.csclLaneId.trim()) {
       newErrors.csclLaneId = 'CSCL Lane ID is required';
@@ -251,9 +293,14 @@ export default function CreateArchetype({
       return;
     }
 
+    const finalDescription = computeDescription(formData.archetypeId, formData.shortDesc, formData.csclLaneId);
+    const finalPrjArchId = formData.archetypeId.trim();
+
     if (onSave) {
       onSave({
         ...formData,
+        description: finalDescription,
+        prjArchId: finalPrjArchId,
         shortDescription: formData.shortDesc,
         project: formData.transcendPrj,
         apsRelevant: formData.ompRelevant,
@@ -422,7 +469,7 @@ export default function CreateArchetype({
 
             <div className={`form-group ${errors.shortDesc ? 'has-error' : ''}`}>
               <label htmlFor="shortDesc">
-                Short Description
+                Short Description <span className="req-asterisk">*</span>
               </label>
               <input
                 type="text"
@@ -807,22 +854,27 @@ export default function CreateArchetype({
             <span className="detail-section-title">DESCRIPTION & DOCUMENTATION</span>
           </div>
 
-          {/* Row 1: Description */}
-          <div className="form-group">
-            <label htmlFor="description">Description</label>
-            <textarea
-              id="description"
-              name="description"
-              rows={3}
-              placeholder="Describe the lane purpose and scope..."
-              value={formData.description}
-              onChange={handleChange}
-              style={{ width: '100%', resize: 'vertical' }}
-            />
-          </div>
+          {/* Row 1: Description & File Link */}
+          <div className="create-grid-2">
+            <div className="form-group">
+              <label htmlFor="description">Description</label>
+              <input
+                type="text"
+                id="description"
+                name="description"
+                placeholder="[Archetype ID] Short Description Lane ID"
+                value={formData.description}
+                readOnly
+                disabled
+                className="disabled-input"
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  color: '#475569',
+                  cursor: 'not-allowed'
+                }}
+              />
+            </div>
 
-          {/* Row 2: File Link with Browse, Documentation */}
-          <div className="create-grid-2" style={{ marginTop: '16px' }}>
             <div className="form-group">
               <label htmlFor="fileLink">File Link</label>
               <div className="attachment-input-wrapper">
@@ -853,7 +905,10 @@ export default function CreateArchetype({
                 </button>
               </div>
             </div>
+          </div>
 
+          {/* Row 2: Documentation & Project Archetype ID */}
+          <div className="create-grid-2" style={{ marginTop: '16px' }}>
             <div className="form-group">
               <label htmlFor="documentation">Documentation</label>
               <input
@@ -865,19 +920,25 @@ export default function CreateArchetype({
                 onChange={handleChange}
               />
             </div>
-          </div>
 
-          {/* Row 3: Project Archetype ID */}
-          <div className="form-group" style={{ marginTop: '16px', maxWidth: '32%' }}>
-            <label htmlFor="prjArchId">Project Archetype ID</label>
-            <input
-              type="text"
-              id="prjArchId"
-              name="prjArchId"
-              placeholder="e.g. PRJ-ARCH-01"
-              value={formData.prjArchId}
-              onChange={handleChange}
-            />
+            <div className="form-group">
+              <label htmlFor="prjArchId">Project Archetype ID</label>
+              <input
+                type="text"
+                id="prjArchId"
+                name="prjArchId"
+                placeholder="e.g. PRJ-ARCH-01"
+                value={formData.prjArchId}
+                readOnly
+                disabled
+                className="disabled-input"
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  color: '#475569',
+                  cursor: 'not-allowed'
+                }}
+              />
+            </div>
           </div>
         </div>
 
