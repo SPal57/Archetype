@@ -98,54 +98,16 @@ export const PATTERN_ID_OPTIONS = [
   'P-V-V-P'
 ];
 
-// 6. Search Status Options (Includes intermediate workflow states + Lane Statuses)
+// 6. Search Status Options (Shows only Status LOVs, no Visio Status)
 export const SEARCH_STATUS_OPTIONS = [
   'All Statuses',
-  'Approved',
-  'Approval in Progress',
-  'Ready for Approval',
-  'New',
-  'Draft',
-  'Reopened',
-  '00-Active no ILA',
-  '00-New',
-  '00-T1 Backlog',
-  '01-NPI',
-  '02-Data Construction',
-  '02-ILA creation TEST',
-  '03-Implementing ILA',
-  '03-TranSCend Project',
-  '04-On hold',
-  '05-Closed',
-  '05-Phasing Out',
-  '06-Canceled',
-  '07-LIVE',
-  'TT-Temp Active',
-  'ZZ-Technical status'
+  ...STATUS_OPTIONS
 ];
 
-// 7. PFC Status Options (Advanced Search + Lane Statuses)
+// 7. PFC Status Options (PFC Status = Status in lane header, extra LOVs removed)
 export const PFC_STATUS_OPTIONS = [
   'Any',
-  'Approved',
-  'New',
-  'Draft',
-  'In Progress',
-  '00-Active no ILA',
-  '00-New',
-  '00-T1 Backlog',
-  '01-NPI',
-  '02-Data Construction',
-  '02-ILA creation TEST',
-  '03-Implementing ILA',
-  '03-TranSCend Project',
-  '04-On hold',
-  '05-Closed',
-  '05-Phasing Out',
-  '06-Canceled',
-  '07-LIVE',
-  'TT-Temp Active',
-  'ZZ-Technical status'
+  ...STATUS_OPTIONS
 ];
 
 // 8. Node Types

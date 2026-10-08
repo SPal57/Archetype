@@ -167,15 +167,24 @@ export default function App() {
         return false;
       }
 
-      // Status (matching either visioStatus or pfcStatus)
+      // Status (matching PFC Status / Lane Header Status ONLY, not Visio Status)
       if (
         activeSearchCriteria.status &&
         activeSearchCriteria.status !== 'All Statuses'
       ) {
         const queryStatus = activeSearchCriteria.status.toLowerCase();
-        const visioMatch = item.visioStatus?.toLowerCase().includes(queryStatus);
-        const pfcMatch = item.pfcStatus?.toLowerCase().includes(queryStatus);
-        if (!visioMatch && !pfcMatch) return false;
+        const itemStatus = (item.status || item.pfcStatus || '').toLowerCase();
+        if (itemStatus !== queryStatus && !itemStatus.includes(queryStatus)) return false;
+      }
+
+      // PFC Status (from Advanced Search)
+      if (
+        activeSearchCriteria.pfcStatus &&
+        activeSearchCriteria.pfcStatus !== 'Any'
+      ) {
+        const queryPfc = activeSearchCriteria.pfcStatus.toLowerCase();
+        const itemStatus = (item.status || item.pfcStatus || '').toLowerCase();
+        if (itemStatus !== queryPfc && !itemStatus.includes(queryPfc)) return false;
       }
 
       // Lane ID
